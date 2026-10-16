@@ -144,7 +144,9 @@ async function register(res, b) {
   if (!validName(b.full_name)) return fail(res, 'Invalid name — please write your real name (2-40 letters)', 400);
   if (String(b.password || '').length < 6) return fail(res, 'Password must be at least 6 characters', 400);
   const city = cleanCity(b.city);
-  if (!city) return fail(res, 'City is required — type your area or city', 400);
+  // Volunteers must give a city (that is how they get matched). A citizen only needs
+  // name + valid mobile + password to create an account — area comes later with their request.
+  if (role === 'volunteer' && !city) return fail(res, 'City is required \u2014 type your area or city', 400);
   let skills = [];
   if (role === 'volunteer') {
     skills = (Array.isArray(b.skills) ? b.skills : []).filter(Boolean).slice(0, 3);

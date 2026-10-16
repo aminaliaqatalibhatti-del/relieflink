@@ -371,26 +371,22 @@ label.urgent-on{color:#d64545!important;font-weight:700}
       <div class="field" style="--i:1"><input aria-label="Full name" placeholder="Full name" required></div>
       <div class="field" style="--i:2"><input type="tel" aria-label="Phone" placeholder="Phone / WhatsApp" required></div>
       <div class="field" style="--i:3">
-        <select aria-label="What do you need?" required>
-          <option value="" disabled selected>What do you need?</option>
-          <option>Flood rescue</option><option>Medical help</option><option>Shelter</option><option>Food or water</option><option>Other</option>
-        </select>
-      </div>
-      <div class="field" style="--i:4">
         <div style="display:flex;gap:8px">
           <input id="helpArea" aria-label="Area" placeholder="Area / city" required style="flex:1">
           <button type="button" id="geoBtn" title="Use my GPS location" onclick="RL.useGeo('helpArea')" style="flex:none;background:var(--g);color:#fff;border:none;border-radius:12px;padding:0 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">My location</button>
         </div>
       </div>
-      <div class="row" style="--i:5"><label><input type="checkbox" id="urgentCheck"> <span data-rl="chkUrgent">This is urgent</span></label></div>
-      <button class="btn" style="--i:6" data-rl="btnHelp">Request help</button>
+      <div class="field" style="--i:4"><input type="password" name="hpass" aria-label="Password" placeholder="Password (6+ characters)" required minlength="6" autocomplete="new-password"></div>
+      <div class="field" style="--i:5"><input type="password" name="hpass2" aria-label="Confirm password" placeholder="Confirm password" required minlength="6" autocomplete="new-password"></div>
+      <div class="row" style="--i:6"><label><input type="checkbox" id="urgentCheck"> <span data-rl="chkUrgent">This is urgent</span></label></div>
+      <button class="btn" style="--i:7" data-rl="btnCreate">Create account</button>
       <p class="alt" style="--i:7">Want to help? <a data-go="volunteer" tabindex="0" role="button">Volunteer</a> &nbsp;·&nbsp; <a tabindex="0" role="button" id="hsOpen"><span data-rl="lnkAccSign">Have an account? Sign in</span></a> &nbsp;·&nbsp; <a data-go="admin" tabindex="0" role="button">Admin</a></p>
       <div id="helpSign" style="display:none;width:100%">
         <h3 data-rl="hAccSign">Sign in to your account</h3>
         <div class="field"><input type="tel" id="hsPhone" aria-label="Phone" placeholder="Phone: 03001234567" maxlength="17"></div>
         <div class="field"><input type="password" id="hsPass" aria-label="Password" placeholder="Password" autocomplete="current-password"></div>
         <button class="btn" type="button" id="hsGo" data-rl="btnSignin">Sign in</button>
-        <p class="alt"><a tabindex="0" role="button" id="hsBack"><span data-rl="lnkGuest">Continue without an account</span></a></p>
+        <p class="alt"><a tabindex="0" role="button" id="hsReg"><span data-rl="lnkNoAcc">New here? Create account</span></a></p>
       </div>
     </form>
 
@@ -542,16 +538,14 @@ label.urgent-on{color:#d64545!important;font-weight:700}
       <h3>Tell us what <em>you need.</em></h3>
       <p>A trained volunteer near you will be in touch within minutes.</p>
     </div>
-    <form class="m-sheet-form" data-mmsg="Request sent! A volunteer will contact you soon.">
+    <form class="m-sheet-form" data-mmsg="Account created! A volunteer will contact you soon.">
       <div class="m-field"><label>Full Name</label><input type="text" placeholder="Your full name" required></div>
       <div class="m-field"><label>Phone / WhatsApp</label><input type="tel" placeholder="+92 3xx-xxxxxxx" required></div>
-      <div class="m-field">
-        <label>What do you need?</label>
-        <select required><option value="" disabled selected>Choose type…</option><option>Flood rescue</option><option>Medical help</option><option>Shelter</option><option>Food or water</option><option>Other</option></select>
-      </div>
       <div class="m-field"><label>Area / City</label><input type="text" placeholder="Your location" required></div>
+      <div class="m-field"><label>Password</label><input type="password" name="hpass" placeholder="Password (6+ characters)" required minlength="6" autocomplete="new-password"></div>
+      <div class="m-field"><label>Confirm Password</label><input type="password" name="hpass2" placeholder="Re-enter password" required minlength="6" autocomplete="new-password"></div>
       <label class="m-check"><input type="checkbox" id="mUrgentCheck"> Mark as urgent</label>
-      <button type="submit" class="m-btn" data-rl="btnHelp">Send Request for Help</button>
+      <button type="submit" class="m-btn" data-rl="btnCreate">Create account</button>
       <p class="m-alt">Want to help others? <a data-mopen="volunteer">Volunteer</a> &nbsp;·&nbsp; <a data-mopen="signin"><span data-rl="lnkAccSign">Have an account? Sign in</span></a></p>
     </form>
   </div>
@@ -576,10 +570,11 @@ label.urgent-on{color:#d64545!important;font-weight:700}
       <p>Sign in with your mobile number and password to track your request status.</p>
     </div>
     <form class="m-sheet-form" id="mSignForm">
+      <div class="m-field" id="mRegNameField" style="display:none"><label>Full Name</label><input type="text" id="mSignName" placeholder="Your full name" maxlength="40" autocomplete="name"></div>
       <div class="m-field"><label>Mobile Number</label><input type="tel" id="mSignPhone" placeholder="03001234567" required pattern="03\d{9}|\+?92\s?0?3\d[\s\d-]{7,11}" maxlength="17"></div>
       <div class="m-field"><label>Password</label><input type="password" id="mSignPass" placeholder="••••••••" required autocomplete="current-password"></div>
-      <button type="submit" class="m-btn"><span data-rl="btnSigninMob">Sign in</span></button>
-      <p class="m-alt"><a data-mopen="volunteer"><span data-rl="lnkNoAccMob">Volunteer account? Join as volunteer</span></a></p>
+      <button type="submit" class="m-btn"><span id="mSignBtn" data-rl="btnSigninMob">Sign in</span></button>
+      <p class="m-alt"><a data-mtogglereg="" tabindex="0" role="button"><span id="mRegToggle" data-rl="lnkNoAcc">New here? Create account</span></a> &nbsp;·&nbsp; <a data-mopen="volunteer"><span data-rl="lnkNoAccMob">Volunteer account? Join as volunteer</span></a></p>
     </form>
   </div>
 
@@ -675,6 +670,14 @@ return post('/auth/signin',{phone:phone,password:password}).then(function(r){
 if(r.ok&&r.data&&r.data.data){setSession(r.data.data,true);return {ok:true,user:r.data.data.user||{}}}
 if(r.status===401)return {blocked:true,msg:'Incorrect mobile number or password'};
 return {blocked:true,msg:(r.data&&r.data.message)||'Could not sign in — please try again'};}).catch(function(){return {blocked:true,msg:'Server not reachable'}})}
+function doSignup(name,phone,password){if(!API)return Promise.resolve({blocked:true,msg:'Creating an account needs the live backend (demo mode has no accounts)'});
+var nm=String(name||'').trim();if(nm.length<2)return Promise.resolve({blocked:true,msg:'Please write your real full name (e.g. Ali Raza)'});
+var ph=normPK(phone);if(!ph)return Promise.resolve({blocked:true,msg:'Please enter a valid mobile number (e.g. 03001234567)'});
+if(String(password||'').length<6)return Promise.resolve({blocked:true,msg:'Password must be at least 6 characters'});
+return post('/auth/register',{role:'citizen',full_name:nm,phone:ph,password:password}).then(function(r){
+if(r.ok&&r.data&&r.data.data){setSession(r.data.data,true);return {ok:true,user:r.data.data.user||{}}}
+if(r.status===409)return {blocked:true,code:'exists',msg:(r.data&&r.data.message)||'This number already has an account — please sign in'};
+return {blocked:true,msg:(r.data&&r.data.message)||'Could not create the account — please try again'};}).catch(function(){return {blocked:true,msg:'Server not reachable'}})}
 function normPK(raw){var d=String(raw||'').replace(/\D/g,'');if(d.indexOf('0092')===0)d=d.slice(4);else if(d.indexOf('92')===0)d=d.slice(2);if(d.indexOf('0')===0)d=d.slice(1);if(!/^3\d{9}$/.test(d))return null;return '03'+d.slice(1);}
 function validateClient(role,o){o=o||{};var RE=/^[A-Za-z\u0600-\u06FF][A-Za-z\u0600-\u06FF ']{1,39}$/;if(!o.name||o.name.length<2||!RE.test(o.name))return 'Please write your real full name (e.g. Ali Raza)';if(!normPK(o.phone))return 'Please enter a valid mobile number (e.g. 03001234567)';if(role==='volunteer'&&(!o.area||String(o.area).trim().length<2))return 'Please enter your city';if(role==='volunteer'){if(!o.password||o.password.length<6)return 'Password must be at least 6 characters';if(o.password!==o.pass2)return 'The two passwords do not match — please retype';}return '';}
 function collect(f,role){try{var tx=[].slice.call(f.querySelectorAll('input:not([type=checkbox]):not([type=password]):not([name=pass2]),select')).filter(function(e){return e.tagName!=='SELECT'&&e.offsetParent!==null}).map(function(e){return e.value.trim()}),sel=f.querySelector('select'),sv=sel&&!sel.closest('[style*="none"]')?sel.value:'',cb=f.querySelector('input[type=checkbox]'),pwE=f.querySelector('input[type=password]'),o={role:role,ts:Date.now()};
@@ -683,8 +686,8 @@ else{o.name=tx[0];o.phone=tx[1];o.area=tx[2];if(role==='help'){o.type=sv;o.urgen
 P[role]=o;sessionStorage.setItem('rl_user',JSON.stringify(o));localStorage.setItem('rl_user',JSON.stringify(o))}catch(e){}}
 function queue(role,o){try{var k=role==='help'?'rl_help':'rl_vols',a=JSON.parse(localStorage.getItem(k)||'[]');a.push(o);localStorage.setItem(k,JSON.stringify(a))}catch(e){}}
 function send(role){var o=P[role];if(!o||!API)return Promise.resolve({offline:true});var c=geo(o.area),req;
-if(role==='help'){var HC={'Flood rescue':'rescue','Medical help':'medical','Shelter':'shelter','Food or water':'food','Other':'special'};
- req=post('/help-requests',{category:HC[o.type]||'special',full_name:o.name,phone:o.phone,city:o.area,description:o.type+(o.urgent?' (urgent)':''),urgent:!!o.urgent,latitude:(GPS?GPS.lat:(c||PK)[0]),longitude:(GPS?GPS.lng:(c||PK)[1])})}
+if(role==='help'){var HC={'Flood rescue':'rescue','Medical help':'medical','Shelter':'shelter','Food or water':'food','Other':'special'};var _us=sess();
+ req=post('/help-requests',{category:HC[o.type]||'special',user_id:(_us&&_us.user&&_us.user.id)||null,full_name:o.name,phone:o.phone,city:o.area,description:(o.urgent?'Urgent help needed':'Help needed'),urgent:!!o.urgent,latitude:(GPS?GPS.lat:(c||PK)[0]),longitude:(GPS?GPS.lng:(c||PK)[1])})}
 else if(role==='volunteer'){var b={role:'volunteer',full_name:o.name,phone:o.phone,city:o.area,password:o.password||'',skills:o.skill?[o.skill]:[],availability:o.weekend?'weekends':'available'};req=post('/auth/register',b)}
 else req=post('/auth/admin-signin',{email:o.email,password:P.pw||''});
 return req.then(function(r){if(r.ok){var d=(r.data&&r.data.data)||{};if((role==='volunteer'||role==='admin')&&d.token){setSession(d,role==='volunteer');if(role==='admin'&&d.user&&d.user.id)try{localStorage.setItem('rl_admin',JSON.stringify(d.user))}catch(e){}}return {ok:true,data:r.data};}
@@ -727,6 +730,9 @@ var LANGD={
  lnkHaveAccMob:{en:"Already have an account? Sign in",ur:"\u067e\u06c1\u0644\u06d2 \u0633\u06d2 \u0627\u06a9\u0627\u0624\u0646\u0679 \u06c1\u06d2\u061f \u0633\u0627\u0626\u0646 \u0627\u0646",roman:"Account hai? Sign in"},
  lnkAccSign:{en:"Have an account? Sign in",ur:"\u0627\u06a9\u0627\u0624\u0646\u0679 \u06c1\u06d2\u061f \u0633\u0627\u0626\u0646 \u0627\u0646",roman:"Account hai? Sign in"},
  lnkNoAcc:{en:"New here? Create account",ur:"\u0646\u0626\u06d2 \u06c1\u06cc\u06ba\u061f \u0627\u06a9\u0627\u0624\u0646\u0679 \u0628\u0646\u0627\u0626\u06cc\u06ba",roman:"Naya account? Register"},
+ lnkCreate:{en:"Create account",ur:"\u0627\u06a9\u0627\u0624\u0646\u0679 \u0628\u0646\u0627\u0626\u06cc\u06ba",roman:"Account banayein"},
+ hAccReg:{en:"Create your account",ur:"\u0627\u067e\u0646\u0627 \u0627\u06a9\u0627\u0624\u0646\u0679 \u0628\u0646\u0627\u0626\u06cc\u06ba",roman:"Apna account banayein"},
+ btnCreate:{en:"Create account",ur:"\u0627\u06a9\u0627\u0624\u0646\u0679 \u0628\u0646\u0627\u0626\u06cc\u06ba",roman:"Account banayein"},
  lnkNoAccMob:{en:"Volunteer account? Join as volunteer",ur:"\u0648\u0644\u0646\u0679\u0631 \u0627\u06a9\u0627\u0624\u0646\u0679\u061f \u0634\u0627\u0645\u0644 \u06c1\u0648\u06ba",roman:"Volunteer banna hai? Join karein"},
  lnkGuest:{en:"Continue without an account",ur:"\u0628\u063a\u06cc\u0631 \u0627\u06a9\u0627\u0624\u0646\u0679 \u062c\u0627\u0631\u06cc \u0631\u06a9\u06be\u06cc\u06ba",roman:"Bina account continue karein"}
 };
@@ -742,7 +748,7 @@ function applyLang(lang){
  var selc=document.querySelectorAll(".rl-lang");for(var i=0;i<selc.length;i++)selc[i].value=cur;return cur;}
 window.RL_LangApp=applyLang;
 function forgot(){var t=document.getElementById('toast');if(t){t.textContent='Password reset is handled by your ReliefLink administrator.';t.classList.add('show');clearTimeout(t._ft);t._ft=setTimeout(function(){t.classList.remove('show');},3400);}return false;}
-return {collect:collect,send:send,forgot:forgot,lang:applyLang,useGeo:useGeo,normPK:normPK,validate:validateClient,P:P,signin:doSignin,auth:{set:setSession,clear:clearSession,token:token,sess:sess},dest:function(r){return r==='volunteer'?'dashboards/volunteer.html':r==='admin'?'dashboards/admin.html':r==='help'?'dashboards/help.html':null}}})();
+return {collect:collect,send:send,forgot:forgot,lang:applyLang,useGeo:useGeo,normPK:normPK,validate:validateClient,P:P,signin:doSignin,signup:doSignup,auth:{set:setSession,clear:clearSession,token:token,sess:sess},dest:function(r){return r==='volunteer'?'dashboards/volunteer.html':r==='admin'?'dashboards/admin.html':r==='help'?'dashboards/help.html':null}}})();
 </script>
 <script>
 (function(){
@@ -807,11 +813,18 @@ document.querySelectorAll('.desktop-wrap form').forEach(function(f){
       return;
     }
     RL.collect(f,f.dataset.role);
-    // help form — open help dashboard
+    // help form — create a citizen account and send the first request, then open the dashboard
     if(f.dataset.role === 'help'){
-      var uq=document.getElementById('urgentCheck');
-      showToast(uq&&uq.checked?'Urgent request sent — volunteers alerted first! Opening your dashboard…':'Request sent! Opening your dashboard…');
-      RL.send('help').then(function(){ window.location.href = 'dashboards/help.html'; });
+      var ho=RL.P.help||{};
+      var hpw=f.querySelector('input[name="hpass"]'),hpw2=f.querySelector('input[name="hpass2"]');
+      var hpvv=hpw?hpw.value:'',hpv2=hpw2?hpw2.value:'';
+      if(hpvv.length<6){showToast('Password must be at least 6 characters');return;}
+      if(hpvv!==hpv2){showToast('The two passwords do not match — please retype');return;}
+      showToast('Creating your account\u2026');
+      RL.signup(ho.name,ho.phone,hpvv).then(function(r){
+        if(r.ok){return RL.send('help').then(function(){window.location.href='dashboards/help.html';});}
+        if(r.code==='exists'){return RL.signin(ho.phone,hpvv).then(function(s){if(s.ok){return RL.send('help').then(function(){window.location.href='dashboards/help.html';});}showToast('This number already has an account \u2014 please sign in to continue');helpPanel('sign');var he=document.getElementById('hsPhone');if(he)he.value=ho.phone;});}
+        showToast(r.msg||'Could not create the account');});
       return;
     }
     if(f.dataset.role==='volunteer'){var ve=RL.validate('volunteer',RL.P.volunteer);if(ve){showToast(ve);return;}}
@@ -836,22 +849,22 @@ wireLink('toVolSign',function(){dstop();setRole('volunteer',true);volMode(true);
 wireLink('toVolReg',function(){volMode(false);});
 if(location.hash==='#signin'){dstop();setRole('help',true);helpPanel('sign');var _hs=document.getElementById('hsPhone');if(_hs)_hs.focus();}
 
-/* citizen sign-in panel inside the help form (desktop) — replaces the request form, never stacks under it */
+/* citizen sign-in / create-account panels inside the help form (desktop) — replace the request form, never stack under it */
 function helpPanel(m){
   var s=document.getElementById('helpSign'),f=document.querySelector('form[data-role="help"]');
-  var sign=m==='sign';
-  if(s)s.style.display=sign?'':'none';
-  if(f)for(var i=0;i<f.children.length;i++){var c=f.children[i];if(c!==s)c.style.display=sign?'none':'';}
+  var mode=(m==='sign')?'sign':'none';
+  if(s)s.style.display=mode==='sign'?'':'none';
+  if(f)for(var i=0;i<f.children.length;i++){var c=f.children[i];if(c!==s)c.style.display=mode==='none'?'':'none';}
 }
 function $v(id){var e=document.getElementById(id);return e?String(e.value||'').trim():''}
 wireLink('hsOpen',function(){helpPanel('sign');var e=document.getElementById('hsPhone');if(e)e.focus();});
-wireLink('hsBack',function(){helpPanel('none');});
+wireLink('hsReg',function(){helpPanel('none');var e=document.querySelector('form[data-role="help"] input');if(e)e.focus();});
 var hsGo=document.getElementById('hsGo');
 if(hsGo)hsGo.addEventListener('click',function(){
   var ph=$v('hsPhone'),pw=$v('hsPass');
   if(!RL.normPK(ph)){showToast('Please enter a valid mobile number (e.g. 03001234567)');return;}
   if(!pw){showToast('Please enter your password');return;}
-  showToast('Signing in…');
+  showToast('Signing in\u2026');
   RL.signin(ph,pw).then(function(r){
     if(r.ok){window.location.href=(r.user&&r.user.role==='volunteer')?'dashboards/volunteer.html':'dashboards/help.html';}
     else showToast(r.msg||'Could not sign in');});
@@ -948,9 +961,18 @@ document.querySelectorAll('.m-sheet-form').forEach(function(f){
     e.preventDefault();
     var sheet = f.closest('.m-sheet');
     var mrole = sheet ? sheet.id.replace('sheet-','') : '';
-    // sign-in sheet — authenticate and route to the dashboard matching the account role
+    // sign-in sheet — authenticate (or create a citizen account) and route to the matching dashboard
     if(mrole==='signin'){
       var mp=document.getElementById('mSignPhone'),mpa=document.getElementById('mSignPass');
+      if(mSignMode==='reg'){
+        var mn=document.getElementById('mSignName');
+        showToast('Creating your account…');
+        RL.signup(mn.value,mp.value,mpa.value).then(function(r){
+          closeSheet();
+          if(r.ok){setTimeout(function(){window.location.href='dashboards/help.html';},300);}
+          else showToast(r.msg||'Could not create the account');});
+        return;
+      }
       showToast('Signing in…');
       RL.signin(mp.value,mpa.value).then(function(r){
         closeSheet();
@@ -960,12 +982,18 @@ document.querySelectorAll('.m-sheet-form').forEach(function(f){
     }
     RL.collect(f,mrole);
     if(mrole==='volunteer'){var mve=RL.validate('volunteer',RL.P.volunteer);if(mve){showToast(mve);return;}}
-    // help sheet — open help dashboard
+    // help sheet — create a citizen account and send the first request, then open the dashboard
     if(sheet && sheet.id === 'sheet-help'){
-      var muq=document.getElementById('mUrgentCheck');
-      showToast(muq&&muq.checked?'Urgent request sent — volunteers alerted first! Opening your dashboard…':'Request sent! Opening your dashboard…');
-      closeSheet();
-      RL.send('help').then(function(){ window.location.href = 'dashboards/help.html'; });
+      var mo=RL.P.help||{};
+      var mpw=f.querySelector('input[name="hpass"]'),mpw2=f.querySelector('input[name="hpass2"]');
+      var mpvv=mpw?mpw.value:'',mpv2=mpw2?mpw2.value:'';
+      if(mpvv.length<6){showToast('Password must be at least 6 characters');return;}
+      if(mpvv!==mpv2){showToast('The two passwords do not match — please retype');return;}
+      showToast('Creating your account\u2026');
+      RL.signup(mo.name,mo.phone,mpvv).then(function(r){
+        if(r.ok){return RL.send('help').then(function(){closeSheet();setTimeout(function(){window.location.href='dashboards/help.html';},300);});}
+        if(r.code==='exists'){return RL.signin(mo.phone,mpvv).then(function(s){if(s.ok){return RL.send('help').then(function(){closeSheet();setTimeout(function(){window.location.href='dashboards/help.html';},300);});}showToast('This number already has an account \u2014 please sign in to continue');});}
+        showToast(r.msg||'Could not create the account');});
       return;
     }
     var md=RL.dest(mrole);
@@ -989,6 +1017,21 @@ if(mUrgentCheck){
 /* mobile password toggle */
 var mpw=document.getElementById('mpw'),meye=document.getElementById('meye');
 if(meye)meye.addEventListener('click',function(){var s=mpw.type==='password';mpw.type=s?'text':'password';meye.textContent=s?'Hide':'Show';});
+
+/* mobile sign-in ⇄ create-account toggle inside the sign-in sheet */
+var mSignMode='in';
+function setMSignMode(m){
+  mSignMode=m;var reg=m==='reg';
+  var nf=document.getElementById('mRegNameField'),btn=document.getElementById('mSignBtn'),tg=document.getElementById('mRegToggle');
+  if(nf)nf.style.display=reg?'':'none';
+  if(btn)btn.textContent=reg?'Create account':'Sign in';
+  if(tg)tg.textContent=reg?'Have an account? Sign in':'New here? Create account';
+}
+document.querySelectorAll('[data-mtogglereg]').forEach(function(a){
+  function go(){setMSignMode(mSignMode==='reg'?'in':'reg');}
+  a.addEventListener('click',function(e){e.preventDefault();go();});
+  a.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+});
 
 /* swipe down on sheet to close */
 document.querySelectorAll('.m-sheet').forEach(function(sh){
