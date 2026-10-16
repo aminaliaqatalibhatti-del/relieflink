@@ -211,6 +211,8 @@
 .cat-card .cat-desc { display: none; }
 /* Emergency & Rescue tiles carry one-line feature notes so each box explains its own system (SOS / hospital / shelter) */
 .grp .cat-grid .cat-card .cat-desc { display: block; font-size: 11px; color: var(--mute); margin-top: 2px; }
+/* Hospital / Shelter request mode: no forward picker map — the route map inside SafePoint is the only map */
+#page-request.nospot .lp-map { display: none !important; }
 .cat-card:hover, .cat-card.active { transform: translateY(-3px); border-color: var(--gold); box-shadow: 0 12px 26px rgba(27,58,42,.14); background: var(--card); }
 /* ── Home: grouped feature sections + emergency group ── */
 .home-groups { display: flex; flex-direction: column; gap: 22px; }
@@ -453,8 +455,8 @@
             <button type="button" class="submit-btn" id="reqFindBtn" style="width:auto;margin:0;padding:0 14px;white-space:nowrap" onclick="LP.find()"><i data-i="search"></i> Find</button>
             <button type="button" class="submit-btn" id="reqGeoBtn" style="width:auto;margin:0;padding:0 14px;white-space:nowrap" onclick="LP.locateOnce()"><i data-i="pin"></i> GPS</button>
           </div>
-          <div class="loc-picker">
-            <div class="lp-hint">Search a place with <b>Find</b>, tap the map to drop a pin (drag to fine-tune), or press <b>GPS</b> — the street address fills in automatically.</div>
+          <div class="loc-picker" id="locPicker">
+            <div class="lp-hint" id="lpHint">Search a place with <b>Find</b>, tap the map to drop a pin (drag to fine-tune), or press <b>GPS</b> — the street address fills in automatically.</div>
             <div class="lp-bar">
               <button type="button" class="lp-btn" id="lpLiveBtn" onclick="LP.toggleLive()"><i data-i="pin"></i> Live GPS</button>
               <button type="button" class="lp-btn" onclick="LP.locateOnce()"><i data-i="search"></i> My location</button>
@@ -873,8 +875,8 @@ var SEV_COL = { critical:'var(--r)', high:'var(--o)', medium:'var(--y)', low:'va
 function selectCat(el, cat) {
   document.querySelectorAll('.cat-card').forEach(function(c){ c.classList.remove('active'); });
   el.classList.add('active');
+  var sel = RL_$('reqCat'); if (sel) sel.value = cat;   /* set BEFORE navigate so applyCatMode sees the right category */
   navigate('request');
-  var sel = RL_$('reqCat'); if (sel) sel.value = cat;
 }
 /* Select a request category without a tile element (used by the emergency panel) */
 function selectCatByName(cat) { var s = RL_$('reqCat'); if (s) s.value = cat; navigate('request'); }
@@ -1289,6 +1291,16 @@ function spTitleFor(kind){
   else if(kind==='shelter') t.innerHTML='Nearby Shelter<small>Find and route to the nearest shelter</small>';
   else t.innerHTML='SafePoint<small>Route you to the nearest hospital or shelter</small>';
 }
+/* Category chrome: Hospital/Shelter hide the forward picker map and auto-route; SOS hides SafePoint until a spot exists */
+var hDefaultHint='Search a place with <b>Find</b>, tap the map to drop a pin (drag to fine-tune), or press <b>GPS</b> — the street address fills in automatically.';
+function applyCatMode(){
+  var pg=RL_$('page-request'); if(!pg) return;
+  var kind=spCatKind();
+  var spot=pg.classList.toggle('nospot', kind==='hospital'||kind==='shelter');
+  var h=RL_$('lpHint');
+  if(h) h.innerHTML = spot ? 'Enter your area and press <b>Find</b> (or tap <b>GPS</b>) — the nearest place and the road to it appear below.' : hDefaultHint;
+  if(kind==='sos'){ var b=RL_$('safePoint'); if(b) b.style.display='none'; }
+}
 function spEnsureMap(lat,lng,zoom){
   if(!SAFE_MAP){ SAFE_MAP=RL_LIVE.map('safeMap',lat,lng,zoom==null?14:zoom); }
   else { SAFE_MAP.setView([lat,lng],zoom==null?14:zoom); }
@@ -1308,13 +1320,17 @@ function safePointHere(lat,lng){
     /* Emergency Rescue → SOS system, no hospital/shelter choice step */
     RL_$('safeOpts').style.display='none';
     spSosPanel();
+  } else if(kind==='hospital'||kind==='shelter'){
+    /* Direct flow: no map, no choice step — location entered → nearest list + road drawn right away */
+    RL_$('safeOpts').style.display='none';
+    var rtEl=RL_$('safeRoute'); if(rtEl) rtEl.style.display='';
+    spEnsureMap(lat,lng,13);
+    spBuildRoute(kind,{lat:lat,lng:lng,gps:false});
+    return;
   } else {
     RL_$('safeOpts').style.display='';
-    RL_$('safeOpts').querySelector('.sp-opts').innerHTML = kind==='choose'
-      ? '<button type="button" class="sp-chip" onclick="spChoose(\'hospital\')"><i data-i="hosp"></i> Hospital</button><button type="button" class="sp-chip" onclick="spChoose(\'shelter\')"><i data-i="home"></i> Shelter &amp; Accommodation</button>'
-      : '<button type="button" class="sp-chip" onclick="spChoose(\''+kind+'\')">'+(kind==='hospital'
-        ? '<i data-i="hosp"></i> Find Nearest Hospital'
-        : '<i data-i="home"></i> Find Nearest Shelter')+'</button><button type="button" class="sp-chip" onclick="spChoose(\'sos\')"><i data-i="flame"></i> Send SOS Instead</button>';
+    RL_$('safeOpts').querySelector('.sp-opts').innerHTML =
+      '<button type="button" class="sp-chip" onclick="spChoose(\'hospital\')"><i data-i="hosp"></i> Hospital</button><button type="button" class="sp-chip" onclick="spChoose(\'shelter\')"><i data-i="home"></i> Shelter &amp; Accommodation</button>';
     RL_Icons();
   }
   spEnsureMap(lat,lng,14);
@@ -1747,7 +1763,7 @@ function navigate(page) {
     if (p === 'notifications') { renderNotifs(false); loadNotifsLive(); }
     if (p === 'myrequests')    renderMyReqs();
     if (p === 'profile')        renderProfile();
-    if (p === 'request')       { renderActive(); LP.init(); }
+    if (p === 'request')       { renderActive(); LP.init(); applyCatMode(); }
     if (p === 'mesh')          meshInit();
     if (p === 'alerts')        loadAlerts();
     if (p === 'livemap')       initOpsMap();
