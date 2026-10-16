@@ -262,18 +262,12 @@
 .call-btn { background: linear-gradient(180deg,var(--gold2),var(--gold)) !important; color: var(--g) !important; border: none !important; font-weight: 800; box-shadow: 0 4px 12px rgba(0,0,0,.18); }
 .call-btn:hover { transform: translateY(-2px) scale(1.03); }
 
-/* Bottom emergency bar + bottom nav (mobile only) */
-.sos-bar, .bottom-nav { display: none; }
+/* Bottom nav (mobile only) */
+.bottom-nav { display: none; }
 @media(max-width:900px){
-  .main { padding: 0 14px 196px; }
+  .main { padding: 0 14px 110px; }
   .appbar { margin: 0 -14px 16px; padding: 12px 14px; }
   .cat-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
-  .sos-bar { display: flex; position: fixed; left: 12px; right: 12px; bottom: 88px; z-index: 40; align-items: center; gap: 12px;
-    background: linear-gradient(150deg,var(--g),var(--g2)); color: #F5EEDB; border-radius: 20px; padding: 12px 14px; box-shadow: 0 12px 30px rgba(0,0,0,.28); }
-  .sos-bar .sos-ic { width: 40px; height: 40px; border-radius: 12px; background: rgba(232,200,106,.18); display: grid; place-items: center; font-size: 20px; flex: none; }
-  .sos-bar .sos-txt { flex: 1; min-width: 0; }
-  .sos-bar .sos-txt b { display: block; font-size: 14px; font-weight: 800; }
-  .sos-bar .sos-txt small { font-size: 11px; opacity: .72; }
   .sos-call { display: flex; align-items: center; gap: 7px; background: linear-gradient(180deg,var(--gold2),var(--gold)); color: var(--g); border: none; border-radius: 14px; padding: 11px 16px; font-weight: 800; font-size: 13px; flex: none; }
   .bottom-nav { display: flex; position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 40; justify-content: space-around; align-items: center;
     background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 8px; box-shadow: 0 10px 30px rgba(27,58,42,.16); }
@@ -824,11 +818,6 @@
 </div><!-- /main -->
 </div><!-- /layout -->
 
-<div class="sos-bar">
-  <div class="sos-ic"></div>
-  <div class="sos-txt"><b>Emergency &amp; Rescue</b><small>24/7 Immediate Assistance Available</small></div>
-  <button class="sos-call" onclick="RL_Tel('1122')"><i data-i="phone"></i>Call 1122</button>
-</div>
 <nav class="bottom-nav">
   <button class="bn-item active" data-nav="home" onclick="navigate('home')" aria-label="Home"><i data-i="home"></i></button>
   <button class="bn-item" data-nav="myrequests" onclick="navigate('myrequests')" aria-label="Requests"><i data-i="list"></i></button>
@@ -1809,8 +1798,7 @@ function navigate(page) {
     if (p === 'mesh')          meshInit();
     if (p === 'alerts')        loadAlerts();
     if (p === 'livemap')       initOpsMap();
-    /* Bottom SOS bar shows on Home only */
-    var sos = document.querySelector('.sos-bar'); if (sos) sos.style.display = (p === 'home') ? '' : 'none';
+    /* Bottom SOS bar removed — Home keeps only the bottom nav */
     var bn = document.querySelectorAll('.bn-item');
     for (var i = 0; i < bn.length; i++) bn[i].classList.toggle('active', bn[i].dataset.nav === p);
   });
