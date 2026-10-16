@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Food & Water Help | ReliefLink</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* ── Page-specific ── */
+.page-wrap { max-width: 720px; margin: 0 auto; padding: 28px 16px 80px; }
+.page-header { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+.page-header .back-btn {
+  width:38px; height:38px; border-radius:50%; background:var(--card); border:1px solid var(--line);
+  display:grid; place-items:center; flex:none; cursor:pointer; color:var(--g);
+}
+.page-header .back-btn:hover { background:var(--gold); color:var(--g); }
+.page-title { font-size:22px; font-weight:800; color:var(--g); }
+.page-sub { font-size:13px; color:var(--mute); margin-bottom:22px; }
+
+/* type cards */
+.type-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:22px; }
+.type-card {
+  background:var(--card); border:2px solid var(--line); border-radius:var(--rad);
+  padding:24px 14px; text-align:center; cursor:pointer;
+  transition:border-color .15s, background .15s;
+  color:var(--ink);
+}
+.type-card:hover { border-color:var(--gold); }
+.type-card.active { border-color:var(--gold); background:#FFF8E1; }
+.type-card .tc-emoji { font-size:2.4rem; display:block; margin-bottom:8px; }
+.type-card strong { display:block; font-size:15px; font-weight:700; color:var(--g); }
+.type-card .tc-sub { color:var(--mute); font-size:12.5px; margin-top:3px; }
+
+/* form card */
+.form-card { background:var(--card); border:1px solid var(--line); border-radius:var(--rad); padding:22px; display:none; }
+.form-card.visible { display:block; }
+.form-card h3 { font-size:16px; font-weight:800; color:var(--g); margin-bottom:16px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-label { font-size:12.5px; font-weight:600; color:var(--mute); display:grid; gap:5px; margin-bottom:12px; }
+.form-label span { font-size:13px; font-weight:600; color:var(--g); }
+.field-input {
+  font-family:inherit; font-size:13.5px; color:var(--ink); background:var(--bg);
+  padding:10px 13px; border:1px solid var(--line); border-radius:10px; width:100%;
+  transition:border-color .15s;
+}
+.field-input:focus { outline:none; border-color:var(--gold); background:var(--card); }
+textarea.field-input { resize:vertical; min-height:72px; }
+.submit-btn {
+  width:100%; margin-top:6px; padding:13px; border:none; border-radius:12px;
+  background:var(--g); color:#F5EEDB; font:700 14px 'Plus Jakarta Sans',sans-serif;
+  cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+  transition:background .15s;
+}
+.submit-btn:hover { background:var(--g2); }
+
+/* requests list */
+.section-title { font-size:15px; font-weight:800; color:var(--g); margin:28px 0 14px; }
+.req-card { background:var(--card); border:1px solid var(--line); border-radius:var(--rad); padding:18px; margin-bottom:12px; }
+.req-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+.req-id { font-size:13px; font-weight:700; color:var(--g); }
+.req-meta { font-size:12.5px; color:var(--mute); margin-bottom:10px; }
+
+/* status badge */
+.badge-status {
+  font-size:11.5px; font-weight:700; padding:3px 11px; border-radius:99px;
+  background:var(--line); color:var(--g);
+}
+.badge-status.sent     { background:#EEF2FF; color:#4338CA; }
+.badge-status.approved { background:#ECFDF5; color:#065F46; }
+.badge-status.on_the_way { background:#FEF3C7; color:#92400E; }
+.badge-status.delivered  { background:#D1FAE5; color:#065F46; }
+
+/* step tracker */
+.tracker { display:grid; grid-template-columns:repeat(4,1fr); margin:14px 0 8px; gap:0; }
+.t-step { text-align:center; position:relative; font-size:11.5px; color:var(--mute); }
+.t-step .tdot {
+  width:24px; height:24px; border-radius:50%; background:var(--line); color:#fff;
+  display:grid; place-items:center; margin:0 auto 6px; font-size:11px;
+  position:relative; z-index:1; font-weight:700;
+}
+.t-step::before { content:""; position:absolute; top:11px; left:-50%; width:100%; height:3px; background:var(--line); }
+.t-step:first-child::before { display:none; }
+.t-step.done .tdot { background:var(--g); }
+.t-step.done::before,.t-step.current::before { background:var(--g); }
+.t-step.current .tdot { background:var(--gold); box-shadow:0 0 0 4px #FFF0B3; }
+.t-step.done,.t-step.current { color:var(--g); font-weight:700; }
+.t-step.final.done .tdot { background:var(--gr); }
+
+/* rider box */
+.rider-info { display:flex; align-items:center; gap:8px; background:var(--bg); border-radius:10px; padding:10px 13px; margin-top:10px; font-size:13px; }
+.rider-info strong { color:var(--g); }
+
+/* received btn */
+.received-btn {
+  margin-top:10px; padding:9px 18px; border:none; border-radius:10px;
+  background:var(--gr); color:#fff; font:700 13px 'Plus Jakarta Sans',sans-serif; cursor:pointer;
+}
+.received-btn:hover { background:#2aab78; }
+
+/* empty state */
+.empty-state { text-align:center; color:var(--mute); padding:30px 16px; border:1px dashed var(--line); border-radius:var(--rad); font-size:13.5px; }
+
+/* toast */
+.rl-toast {
+  position:fixed; bottom:calc(20px + env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%);
+  background:var(--g); color:#F5EEDB; padding:10px 20px; border-radius:10px;
+  font-size:13.5px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .22s;
+  white-space:nowrap; z-index:999;
+}
+.rl-toast.show { opacity:1; }
+
+@media(max-width:520px){
+  .type-grid { grid-template-columns:1fr 1fr; gap:10px; }
+  .form-row { grid-template-columns:1fr; }
+  .tracker { font-size:10px; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+  <!-- Header -->
+  <div class="page-header">
+    <button class="back-btn" onclick="history.back()" title="Go back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <h1 class="page-title">Food &amp; Water Help</h1>
+  </div>
+  <p class="page-sub">Select what you need and submit a request to the relief team.</p>
+
+  <!-- Type selector -->
+  <div class="type-grid" role="group" aria-label="Request type">
+    <button type="button" class="type-card" data-type="food" onclick="selectType(this)">
+      <span class="tc-emoji">🍲</span>
+      <strong>Food</strong>
+      <span class="tc-sub">Cooked meals or ration packs</span>
+    </button>
+    <button type="button" class="type-card" data-type="water" onclick="selectType(this)">
+      <span class="tc-emoji">💧</span>
+      <strong>Water</strong>
+      <span class="tc-sub">Clean drinking water</span>
+    </button>
+  </div>
+
+  <!-- Request form -->
+  <div class="form-card" id="reqForm">
+    <h3 id="formTitle">Request</h3>
+    <form id="theForm" onsubmit="submitReq(event)">
+      <div class="form-row">
+        <label class="form-label"><span>Full name</span><input class="field-input" name="name" required placeholder="Your full name"></label>
+        <label class="form-label"><span>Phone</span><input class="field-input" name="phone" type="tel" required placeholder="03xx-xxxxxxx"></label>
+      </div>
+      <label class="form-label"><span>Address</span><input class="field-input" name="address" required placeholder="Area, street, house no."></label>
+      <div class="form-row">
+        <label class="form-label"><span>Number of people</span><input class="field-input" name="people" type="number" min="1" value="1" required></label>
+        <label class="form-label"><span>Quantity needed</span><input class="field-input" name="quantity" type="number" min="1" value="1" required></label>
+      </div>
+      <label class="form-label"><span>Note <small style="font-weight:400">(optional)</small></span><textarea class="field-input" name="note" rows="2" placeholder="Any extra details…"></textarea></label>
+      <button class="submit-btn" type="submit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Send Request
+      </button>
+    </form>
+  </div>
+
+  <!-- My requests -->
+  <div class="section-title">My Requests</div>
+  <div id="myList"></div>
+</div>
+
+<div class="rl-toast" id="toast"></div>
+
+<script>
+const KEY   = 'relieflink_food_requests';
+const STEPS = ['sent','approved','on_the_way','delivered'];
+const LABELS = { sent:'Request Sent', approved:'Approved', on_the_way:'On The Way', delivered:'Delivered' };
+const RIDERS = [
+  {id:'r1',name:'Ali Raza',phone:'0300-1111111'},
+  {id:'r2',name:'Hamza Khan',phone:'0301-2222222'},
+  {id:'r3',name:'Sana Malik',phone:'0302-3333333'}
+];
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||[]; }catch(e){ return []; } }
+function save(list){ try{ localStorage.setItem(KEY,JSON.stringify(list)); }catch(e){} }
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmt(iso){ return new Date(iso).toLocaleString([],{dateStyle:'medium',timeStyle:'short'}); }
+function rider(id){ return RIDERS.find(r=>r.id===id); }
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+function myId(){
+  try{
+    let i = localStorage.getItem('relieflink_user_id');
+    if(!i){ i='u'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); localStorage.setItem('relieflink_user_id',i); }
+    return i;
+  }catch(e){ return 'me'; }
+}
+
+let currentType = null;
+
+function selectType(btn){
+  currentType = btn.dataset.type;
+  document.querySelectorAll('.type-card').forEach(b=>b.classList.toggle('active',b===btn));
+  document.getElementById('formTitle').textContent = currentType==='food' ? '🍲 Food Request' : '💧 Water Request';
+  const fc = document.getElementById('reqForm');
+  fc.classList.add('visible');
+  fc.querySelector('input').focus();
+}
+
+function submitReq(e){
+  e.preventDefault();
+  if(!currentType) return;
+  const d = Object.fromEntries(new FormData(e.target));
+  const list = load();
+  list.unshift({
+    id: 'REQ-'+Date.now().toString(36).toUpperCase().slice(-5),
+    userId: myId(),
+    type: currentType,
+    name: d.name, phone: d.phone, address: d.address,
+    people: +d.people, quantity: +d.quantity, note: d.note||'',
+    status: 'sent', riderId: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+  save(list);
+  e.target.reset();
+  document.getElementById('reqForm').classList.remove('visible');
+  currentType = null;
+  document.querySelectorAll('.type-card').forEach(b=>b.classList.remove('active'));
+  toast('Request sent! The relief team has been notified.');
+  render();
+}
+
+function update(id, patch){
+  save(load().map(r=> r.id===id ? {...r,...patch,updatedAt:new Date().toISOString()} : r));
+  render();
+}
+
+function tracker(status){
+  const idx = STEPS.indexOf(status);
+  return '<div class="tracker">'+STEPS.map((s,i)=>{
+    let c='t-step';
+    if(status==='delivered'||i<idx) c+=' done';
+    else if(i===idx) c+=' current';
+    if(i===STEPS.length-1) c+=' final';
+    return `<div class="${c}"><div class="tdot">${c.includes('done')?'✓':i+1}</div>${LABELS[s]}</div>`;
+  }).join('')+'</div>';
+}
+
+document.getElementById('myList').addEventListener('click', e=>{
+  const id = e.target.dataset.received;
+  if(id){ update(id,{status:'delivered'}); toast('Marked as received. Shukriya! 🙏'); }
+});
+
+window.addEventListener('storage', e=>{ if(e.key===KEY) render(); });
+
+function render(){
+  const mine = load().filter(r=>r.userId===myId());
+  const el = document.getElementById('myList');
+  if(!mine.length){
+    el.innerHTML='<div class="empty-state">No requests yet. Select Food or Water above to send one.</div>';
+    return;
+  }
+  el.innerHTML = mine.map(r=>{
+    const rd = r.riderId && rider(r.riderId);
+    const icon = r.type==='food'?'🍲':'💧';
+    const riderHtml = rd && (r.status==='on_the_way'||r.status==='delivered')
+      ? `<div class="rider-info">🛵 Rider: <strong>${esc(rd.name)}</strong>&nbsp;&nbsp;📞 ${esc(rd.phone)}</div>` : '';
+    const actionHtml = r.status==='on_the_way'
+      ? `<button class="received-btn" data-received="${r.id}">✓ Mark as received</button>` : '';
+    return `<div class="req-card">
+      <div class="req-head">
+        <span class="req-id">${icon} ${esc(r.type==='food'?'Food':'Water')} · ${esc(r.id)}</span>
+        <span class="badge-status ${r.status}">${LABELS[r.status]}</span>
+      </div>
+      <div class="req-meta">${esc(r.quantity)} unit(s) for ${esc(r.people)} people · ${esc(r.address)} · ${fmt(r.createdAt)}</div>
+      ${tracker(r.status)}
+      ${riderHtml}
+      ${actionHtml}
+    </div>`;
+  }).join('');
+}
+
+render();
+</script>
+</body>
+</html>
