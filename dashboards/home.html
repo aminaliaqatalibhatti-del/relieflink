@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Home Essentials | ReliefLink</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>/* ── TOKENS ── */
+:root{--bg:#F5EEDB;--card:#FFFCF4;--g:#1B3A2A;--g2:#2F5A42;--g3:#0f2619;--gold:#C9A227;--gold2:#E8C86A;--ink:#1B3A2A;--mute:#8a866f;--line:#EADFC2;--sh:0 4px 24px rgba(27,58,42,.08);--p:#7C6CF0;--b:#4C8DF6;--gr:#3CC08E;--y:#F5B83D;--o:#F58A3D;--r:#EF5B5B;--rad:16px;--sidebar:250px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{background:var(--bg);scroll-behavior:smooth;}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:14px;color:var(--ink);background:var(--bg);min-height:100vh;}
+a{text-decoration:none;color:inherit;}button{font-family:inherit;cursor:pointer;}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;pointer-events:none;}
+.field-input{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px;font:inherit;font-size:14px;resize:vertical;outline:none;transition:.2s;background:var(--bg);color:var(--ink);}
+.field-input:focus{border-color:var(--gold);}
+.hide{display:none!important;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.fade-up{animation:fadeUp .5s ease both;}
+</style>
+<style>
+/* ── Page-specific ── */
+.page-wrap { max-width:720px; margin:0 auto; padding:28px 16px 80px; }
+.page-header { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+.page-header .back-btn {
+  width:38px; height:38px; border-radius:50%; background:var(--card); border:1px solid var(--line);
+  display:grid; place-items:center; flex:none; cursor:pointer; color:var(--g);
+}
+.page-header .back-btn:hover { background:var(--gold); color:var(--g); }
+.page-title { font-size:22px; font-weight:800; color:var(--g); }
+.page-sub { font-size:13px; color:var(--mute); margin-bottom:22px; }
+
+/* type cards */
+.type-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:22px; }
+.type-card {
+  background:var(--card); border:2px solid var(--line); border-radius:var(--rad);
+  padding:20px 14px; text-align:center; cursor:pointer; color:var(--ink);
+  transition:border-color .15s, background .15s;
+}
+.type-card:hover { border-color:var(--gold); }
+.type-card.active { border-color:var(--gold); background:#FFF8E1; }
+.type-card.span2 { grid-column:span 2; display:flex; align-items:center; gap:16px; text-align:left; padding:18px 20px; }
+.type-card .tc-ico { display:grid; place-items:center; color:var(--g2); flex:none; }
+.type-card .tc-ico svg.i { width:30px; height:30px; }
+.type-card.span2 .tc-ico svg.i { width:38px; height:38px; color:var(--gold); }
+.type-card.active .tc-ico { color:var(--gold); }
+.type-card strong { display:block; font-size:15px; font-weight:700; color:var(--g); }
+.type-card .tc-sub { color:var(--mute); font-size:12.5px; margin-top:3px; }
+.type-card.span2 .tc-tag { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--gold); }
+
+/* form card */
+.form-card { background:var(--card); border:1px solid var(--line); border-radius:var(--rad); padding:22px; display:none; }
+.form-card.visible { display:block; }
+.form-card h3 { font-size:16px; font-weight:800; color:var(--g); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+.form-card h3 svg.i { color:var(--gold); }
+.form-sec { font-size:12px; font-weight:800; color:var(--gold); text-transform:uppercase; letter-spacing:.06em;
+  margin:18px 0 12px; padding-top:14px; border-top:1px dashed var(--line); }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.form-label { font-size:12.5px; font-weight:600; color:var(--mute); display:grid; gap:5px; margin-bottom:12px; }
+.form-label span { font-size:13px; font-weight:600; color:var(--g); }
+.field-input {
+  font-family:inherit; font-size:13.5px; color:var(--ink); background:var(--bg);
+  padding:10px 13px; border:1px solid var(--line); border-radius:10px; width:100%;
+  transition:border-color .15s;
+}
+.field-input:focus { outline:none; border-color:var(--gold); background:var(--card); }
+textarea.field-input { resize:vertical; min-height:72px; }
+select.field-input { appearance:auto; }
+
+/* destination toggle */
+.dest-toggle { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.dest-btn {
+  font:700 13px 'Plus Jakarta Sans',sans-serif; padding:10px; border-radius:11px;
+  border:1.5px solid var(--line); background:var(--bg); color:var(--mute); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:7px; transition:all .15s;
+}
+.dest-btn svg.i { width:17px; height:17px; }
+.dest-btn.active { background:var(--g); color:#F5EEDB; border-color:var(--g); }
+
+.submit-btn {
+  width:100%; margin-top:6px; padding:13px; border:none; border-radius:12px;
+  background:var(--g); color:#F5EEDB; font:700 14px 'Plus Jakarta Sans',sans-serif;
+  cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+  transition:background .15s;
+}
+.submit-btn:hover { background:var(--g2); }
+.submit-btn svg.i { width:17px; height:17px; }
+
+/* requests list */
+.section-title { font-size:15px; font-weight:800; color:var(--g); margin:28px 0 14px; }
+.req-card  { background:var(--card); border:1px solid var(--line); border-radius:var(--rad); padding:18px; margin-bottom:12px; }
+.req-head  { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+.req-id    { font-size:13px; font-weight:700; color:var(--g); display:flex; align-items:center; gap:7px; }
+.req-id svg.i { width:17px; height:17px; color:var(--g2); }
+.req-meta  { font-size:12.5px; color:var(--mute); margin-bottom:10px; }
+.req-items { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.item-chip {
+  font-size:12px; font-weight:600; padding:3px 10px; border-radius:99px;
+  background:var(--bg); border:1px solid var(--line); color:var(--g);
+  display:inline-flex; align-items:center; gap:5px;
+}
+.item-chip svg.i { width:13px; height:13px; }
+.item-chip.urgent { background:#FEE2E2; border-color:#FCA5A5; color:#991B1B; }
+.req-note { font-size:12.5px; color:var(--mute); background:var(--bg); border-radius:8px; padding:8px 11px; margin-bottom:10px; }
+
+.badge-status { font-size:11.5px; font-weight:700; padding:3px 11px; border-radius:99px; background:var(--line); color:var(--g); }
+.badge-status.sent       { background:#EEF2FF; color:#4338CA; }
+.badge-status.approved   { background:#ECFDF5; color:#065F46; }
+.badge-status.on_the_way { background:#FEF3C7; color:#92400E; }
+.badge-status.delivered  { background:#D1FAE5; color:#065F46; }
+
+/* tracker */
+.tracker { display:grid; grid-template-columns:repeat(4,1fr); margin:14px 0 8px; }
+.t-step  { text-align:center; position:relative; font-size:10.5px; color:var(--mute); }
+.t-step .tdot {
+  width:24px; height:24px; border-radius:50%; background:var(--line); color:#fff;
+  display:grid; place-items:center; margin:0 auto 6px; font-size:11px;
+  position:relative; z-index:1; font-weight:700;
+}
+.t-step::before { content:""; position:absolute; top:11px; left:-50%; width:100%; height:3px; background:var(--line); }
+.t-step:first-child::before { display:none; }
+.t-step.done .tdot            { background:var(--g); }
+.t-step.done::before,
+.t-step.current::before       { background:var(--g); }
+.t-step.current .tdot         { background:var(--gold); box-shadow:0 0 0 4px #FFF0B3; }
+.t-step.done,.t-step.current  { color:var(--g); font-weight:700; }
+.t-step.final.done .tdot      { background:var(--gr); }
+
+.who-box   { display:flex; align-items:center; gap:8px; background:var(--bg); border-radius:10px; padding:10px 13px; margin-top:10px; font-size:13px; }
+.who-box svg.i { width:16px; height:16px; color:var(--g2); }
+.who-box strong { color:var(--g); }
+.received-btn  { margin-top:10px; padding:9px 18px; border:none; border-radius:10px; background:var(--gr); color:#fff; font:700 13px 'Plus Jakarta Sans',sans-serif; cursor:pointer; }
+.received-btn:hover { background:#2aab78; }
+.empty-state   { text-align:center; color:var(--mute); padding:30px 16px; border:1px dashed var(--line); border-radius:var(--rad); font-size:13.5px; }
+
+.rl-toast {
+  position:fixed; bottom:calc(20px + env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%);
+  background:var(--g); color:#F5EEDB; padding:10px 20px; border-radius:10px;
+  font-size:13.5px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .22s;
+  white-space:nowrap; z-index:999;
+}
+.rl-toast.show { opacity:1; }
+
+@media(max-width:520px){
+  .type-grid { gap:10px; }
+  .form-row  { grid-template-columns:1fr; }
+  .tracker   { font-size:9.5px; }
+  .type-card.span2 { flex-direction:column; text-align:center; gap:8px; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="page-header">
+    <button class="back-btn" onclick="history.back()" title="Go back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <h1 class="page-title">Home Essentials</h1>
+  </div>
+  <p class="page-sub">Find a home to stay in when your own house is damaged, or get household supplies delivered.</p>
+
+  <!-- Need selector -->
+  <div class="type-grid" role="group" aria-label="What you need">
+    <button type="button" class="type-card span2" data-type="stay" onclick="selectType(this)">
+      <span class="tc-ico"><i data-i="stay"></i></span>
+      <span>
+        <span class="tc-tag">Find a home</span>
+        <strong>Request a Home to Stay</strong>
+        <span class="tc-sub">Your house collapsed or is unsafe — a host family or host home will be arranged for you.</span>
+      </span>
+    </button>
+    <button type="button" class="type-card" data-type="kitchen"  onclick="selectType(this)">
+      <span class="tc-ico"><i data-i="kitchen"></i></span>
+      <strong>Kitchen &amp; Cooking</strong>
+      <span class="tc-sub">Pots, stove, dishes, water can</span>
+    </button>
+    <button type="button" class="type-card" data-type="cleaning" onclick="selectType(this)">
+      <span class="tc-ico"><i data-i="drop"></i></span>
+      <strong>Cleaning &amp; Sanitation</strong>
+      <span class="tc-sub">Broom, buckets, soap, bleach</span>
+    </button>
+    <button type="button" class="type-card" data-type="bedding"  onclick="selectType(this)">
+      <span class="tc-ico"><i data-i="bed"></i></span>
+      <strong>Bedding &amp; Furniture</strong>
+      <span class="tc-sub">Charpai, mattress, sheets, pillow</span>
+    </button>
+    <button type="button" class="type-card" data-type="repair"   onclick="selectType(this)">
+      <span class="tc-ico"><i data-i="tools"></i></span>
+      <strong>Minor Home Repair</strong>
+      <span class="tc-sub">Tarpaulin, cement, pipe, wiring</span>
+    </button>
+  </div>
+
+  <!-- Request form (shown after selecting a need) -->
+  <div class="form-card" id="reqForm">
+    <h3 id="formTitle">Request</h3>
+    <form id="theForm" onsubmit="submitReq(event)">
+
+      <!-- ───── SUPPLY MODE ───── -->
+      <div id="supplyMode">
+        <div class="form-label">
+          <span>Deliver to</span>
+          <div class="dest-toggle">
+            <button type="button" class="dest-btn active" data-dest="home"    onclick="setDest(this)"><i data-i="home"></i> My Home</button>
+            <button type="button" class="dest-btn"        data-dest="shelter" onclick="setDest(this)"><i data-i="shield"></i> A Shelter</button>
+          </div>
+        </div>
+
+        <label class="form-label" id="addrWrap">
+          <span>Home address</span>
+          <input class="field-input" name="address" id="addrInput" placeholder="Area, street, house no.">
+        </label>
+
+        <label class="form-label hide" id="shelterWrap">
+          <span>Shelter</span>
+          <select class="field-input" name="shelter" id="shelterSelect">
+            <option value="">— Select the shelter you are staying at —</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- ───── FIND-A-HOME MODE ───── -->
+      <div id="stayMode" class="hide">
+        <div class="form-sec">Your family</div>
+        <div class="form-row">
+          <label class="form-label"><span>People needing a place</span><input class="field-input" name="speople" type="number" min="1" value="1"></label>
+          <label class="form-label"><span>Children / elderly in the family</span><input class="field-input" name="companions" placeholder="e.g. 3 children, 1 grandmother"></label>
+        </div>
+
+        <label class="form-label">
+          <span>Where are you right now?</span>
+          <input class="field-input" name="currentArea" placeholder="e.g. on the road outside my damaged house, Mohalla 3, Chak 44">
+        </label>
+
+        <div class="form-sec">The home you are looking for</div>
+        <div class="form-row">
+          <label class="form-label">
+            <span>Preferred area</span>
+            <input class="field-input" name="prefArea" placeholder="e.g. near Bhakra Road, so work/school is close">
+          </label>
+          <label class="form-label">
+            <span>How long</span>
+            <select class="field-input" name="duration">
+              <option>Up to a week</option>
+              <option>Until our house is rebuilt</option>
+              <option>A longer stay (weeks or months)</option>
+              <option>Not sure — need urgent help</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="form-label">
+          <span>What kind of place suits you?</span>
+          <select class="field-input" name="stayType">
+            <option>Any available host home</option>
+            <option>A room with a host family</option>
+            <option>A separate house / flat</option>
+            <option>Host home near a madrasa or community centre</option>
+            <option>Women-only or family-only housing</option>
+          </select>
+        </label>
+
+        <label class="form-label">
+          <span>Anything the host family should know <small style="font-weight:400">(optional)</small></span>
+          <input class="field-input" name="household" placeholder="e.g. one person uses a wheelchair, we cook separately, no ground floor">
+        </label>
+      </div>
+
+      <!-- ───── COMMON ───── -->
+      <div class="form-sec">Your details</div>
+      <div class="form-row">
+        <label class="form-label"><span>Full name</span><input class="field-input" name="name" required placeholder="Your full name"></label>
+        <label class="form-label"><span>Phone</span><input class="field-input" name="phone" type="tel" required placeholder="03xx-xxxxxxx"></label>
+      </div>
+
+      <div class="form-row" id="supplyRow">
+        <label class="form-label"><span>Number of people</span><input class="field-input" name="people" type="number" min="1" value="1"></label>
+        <label class="form-label"><span>Quantity needed</span><input class="field-input" name="quantity" type="number" min="1" value="1"></label>
+      </div>
+
+      <label class="form-label" id="itemsWrap">
+        <span>Items needed</span>
+        <select class="field-input" name="items" id="itemsSelect">
+          <option value="">— Select item —</option>
+        </select>
+      </label>
+
+      <label class="form-label">
+        <span>Urgency</span>
+        <select class="field-input" name="urgency">
+          <option value="normal">Normal — within a few days</option>
+          <option value="urgent">Urgent — needed today</option>
+          <option value="critical">Critical — children or elderly affected</option>
+        </select>
+      </label>
+
+      <label class="form-label">
+        <span>Note <small style="font-weight:400">(optional)</small></span>
+        <textarea class="field-input" name="note" rows="2" placeholder="Any extra details…"></textarea>
+      </label>
+
+      <button class="submit-btn" type="submit">
+        <svg class="i" viewBox="0 0 24 24"><path d="M22 2 11 13 M22 2 15 22 11 13 2 9 22 2"/></svg>
+        <span id="submitLabel">Send Request</span>
+      </button>
+    </form>
+  </div>
+
+  <!-- My requests -->
+  <div class="section-title">My Requests</div>
+  <div id="myList"></div>
+
+</div>
+<div class="rl-toast" id="toast"></div>
+
+<script>
+const KEY    = 'relieflink_home_requests';
+const STEPS  = ['sent','approved','on_the_way','delivered'];
+const LABELS      = { sent:'Request Sent', approved:'Approved',      on_the_way:'On The Way',   delivered:'Delivered' };
+const STAY_LABELS = { sent:'Request Filed', approved:'Family Verified', on_the_way:'Host Home Found', delivered:'Shifted / Housed' };
+const URGENCY = { normal:'Normal', urgent:'Urgent', critical:'Critical' };
+
+const RIDERS = [
+  {id:'r1',name:'Ali Raza',  phone:'0300-1111111'},
+  {id:'r2',name:'Hamza Khan',phone:'0301-2222222'},
+  {id:'r3',name:'Sana Malik',phone:'0302-3333333'}
+];
+/* Host homes registered by the response team (assigned by the admin) */
+const HOSTS = [
+  {id:'h1',name:'Host home — Ahmed family, 2 rooms, Bahria Town, Rawalpindi', phone:'0300-9999901', capacity:6},
+  {id:'h2',name:'Host home — Malik house, 1 floor free, Satellite Town, Multan', phone:'0301-9999902', capacity:4},
+  {id:'h3',name:'Host home — Bano bakery upstairs, Ghari Mitu, Rawalpindi',      phone:'0302-9999903', capacity:5},
+  {id:'h4',name:'Community host house — Jadoon welfare society, Rajanpur',        phone:'0303-9999904', capacity:10}
+];
+
+/* Simple line icons — same style as the dashboard icon set */
+const IP = {
+  stay:    'M3 11l9-8 9 8 M5 10v10h14V10 M10 20v-4a2 2 0 0 1 4 0v4',
+  home:    'M3 11l9-8 9 8 M5 10v10h14V10',
+  kitchen: 'M5 11h14v5a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z M12 8V4 M8 8V5 M16 8V5',
+  bed:     'M2 19v-7h20v7 M2 12V9a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3 M2 19h20 M5 19v2 M19 19v2',
+  drop:    'M12 2.7s6 6.3 6 11.3a6 6 0 0 1-12 0c0-5 6-11.3 6-11.3z',
+  tools:   'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3-3a6 6 0 0 1-7 7l-1.4 1.4a1 1 0 0 1-1.4 0L7 10.4a1 1 0 0 1 0-1.4L8.4 7.6a6 6 0 0 1 7-7z',
+  shield:  'M12 2l7 4v6c0 5.2-4 9.6-7 11-3-1.4-7-5.8-7-11V6z',
+  scooter: 'M4 17a3 3 0 1 0 6 0 3 3 0 0 0-6 0z M15 17a3 3 0 1 0 6 0 3 3 0 0 0-6 0z M7 17h8 M10 8h4l2 9 M6 8h5l1 9',
+  key:     'M15 8a4 4 0 1 0-3.5 4L14 15h3v3h3v-3l-2.5-2.5A4 4 0 0 0 15 8z',
+  users:   'M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2 M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M21 21v-2a4 4 0 0 0-3-3.9 M16 3.1a4 4 0 0 1 0 7.8'
+};
+function ico(n){ return IP[n] ? '<svg class="i" viewBox="0 0 24 24"><path d="'+IP[n]+'"/></svg>' : ''; }
+function hydrateIcons(){
+  document.querySelectorAll('i[data-i]').forEach(function(e){
+    const s = ico(e.dataset.i); if (s) e.outerHTML = s;
+  });
+}
+
+/* Supplies per category */
+const CAT_META = {
+  kitchen:  { icon:'kitchen', label:'Kitchen & Cooking',
+    items:['Cooking pots & karahi','Gas stove / cylinder','Dishes & cutlery set','Drinking water canister','Chakla & belan (roti set)','Mixed kitchen set'] },
+  cleaning: { icon:'drop',    label:'Cleaning & Sanitation',
+    items:['Broom & brush set','Bucket & mug','Detergent & soap','Bleach / phenyl','Sanitiser spray','Mixed cleaning kit'] },
+  bedding:  { icon:'bed',     label:'Bedding & Furniture',
+    items:['Charpai / cot','Foam mattress','Bed sheet set','Pillow','Curtains','Storage box / almirah','Mixed bedding set'] },
+  repair:   { icon:'tools',   label:'Minor Home Repair',
+    items:['Tarpaulin / roofing sheet','Wood & nails kit','Cement / plaster bag','Water pipe & fittings','Bulb & wiring kit','Mixed repair kit'] },
+  stay:     { icon:'stay',    label:'Find a Home to Stay', items:[] }
+};
+
+/* Registered shelters (delivery point when "A Shelter" is chosen) */
+const SHELTERS = [
+  'Al-Mustafa Relief Camp — Bahawalpur Road, Multan',
+  'PDMA Transit Shelter — DHA Phase 8, Karachi',
+  'Govt Degree College Camp — Nowshera, Peshawar',
+  'Jadoon Flood Camp — Rukanpur, Rajanpur',
+  'Bait-ul-Mahro Shelter — Nawabshah, Shaheed Benazirabad',
+  'I.I.I. Community Camp — Chaklala, Rawalpindi'
+];
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||[]; }catch(e){ return []; } }
+function save(list){ try{ localStorage.setItem(KEY,JSON.stringify(list)); }catch(e){} }
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmt(iso){ return new Date(iso).toLocaleString([],{dateStyle:'medium',timeStyle:'short'}); }
+function rider(id){ return RIDERS.find(r=>r.id===id); }
+function host(id){ return HOSTS.find(h=>h.id===id); }
+function labelsFor(r){ return r.mode==='stay' ? STAY_LABELS : LABELS; }
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+function myId(){
+  try{
+    let i=localStorage.getItem('relieflink_user_id');
+    if(!i){ i='u'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); localStorage.setItem('relieflink_user_id',i); }
+    return i;
+  }catch(e){ return 'me'; }
+}
+
+let currentType = null;
+let currentDest = 'home';
+
+function setDest(btn){
+  currentDest = btn.dataset.dest;
+  document.querySelectorAll('.dest-btn').forEach(b=>b.classList.toggle('active',b===btn));
+  const shelter = currentDest==='shelter';
+  document.getElementById('shelterWrap').classList.toggle('hide',!shelter);
+  document.getElementById('addrWrap').classList.toggle('hide',shelter);
+  document.getElementById('addrInput').required = !shelter;
+}
+
+function selectType(btn){
+  currentType = btn.dataset.type;
+  document.querySelectorAll('.type-card').forEach(b=>b.classList.toggle('active',b===btn));
+  const meta = CAT_META[currentType];
+  const stay = currentType==='stay';
+
+  document.getElementById('formTitle').innerHTML = ico(meta.icon) + ' ' + esc(meta.label) + (stay ? ' Request' : ' Request');
+  document.getElementById('submitLabel').textContent = stay ? 'Send Housing Request' : 'Send Request';
+
+  document.getElementById('stayMode').classList.toggle('hide',!stay);
+  document.getElementById('supplyMode').classList.toggle('hide',stay);
+  document.getElementById('supplyRow').classList.toggle('hide',stay);
+  document.getElementById('itemsWrap').classList.toggle('hide',stay);
+
+  if(!stay){
+    const is = document.getElementById('itemsSelect');
+    is.innerHTML = '<option value="">— Select item —</option>'
+      + meta.items.map(i=>`<option>${i}</option>`).join('');
+    const ss = document.getElementById('shelterSelect');
+    ss.innerHTML = '<option value="">— Select the shelter you are staying at —</option>'
+      + SHELTERS.map(s=>`<option>${s}</option>`).join('');
+    setDest(document.querySelector('.dest-btn.active') || document.querySelector('.dest-btn[data-dest="home"]'));
+  } else {
+    /* hidden fields must not block validation */
+    document.getElementById('addrInput').required = false;
+  }
+
+  const fc = document.getElementById('reqForm');
+  fc.classList.add('visible');
+  hydrateIcons();
+  fc.querySelector('input').focus();
+}
+
+function submitReq(e){
+  e.preventDefault();
+  if(!currentType) return;
+  const d = Object.fromEntries(new FormData(e.target));
+  const meta = CAT_META[currentType];
+  const stay = currentType==='stay';
+  const list = load();
+
+  const base = {
+    id:        'HOME-'+Date.now().toString(36).toUpperCase().slice(-5),
+    userId:    myId(),
+    mode:      stay ? 'stay' : 'supply',
+    category:  currentType,
+    catLabel:  meta.label,
+    icon:      meta.icon,
+    name:      d.name,
+    phone:     d.phone,
+    urgency:   d.urgency||'normal',
+    note:      d.note||'',
+    status:    'sent',
+    riderId:   null,
+    hostId:    null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  if(stay){
+    Object.assign(base,{
+      people:     +d.speople || 1,
+      companions: d.companions||'',
+      currentArea:d.currentArea||'',
+      prefArea:   d.prefArea||'',
+      duration:   d.duration,
+      stayType:   d.stayType,
+      household:  d.household||'',
+      address:    d.prefArea || d.currentArea || 'No area given'
+    });
+  } else {
+    const shelter = currentDest==='shelter';
+    Object.assign(base,{
+      dest:      currentDest,
+      destLabel: shelter ? 'Shelter' : 'Home',
+      shelter:   shelter ? (d.shelter||'') : '',
+      address:   shelter ? (d.shelter||'') : d.address,
+      people:    +d.people || 1,
+      quantity:  +d.quantity || 1,
+      items:     d.items||''
+    });
+  }
+
+  list.unshift(base);
+  save(list);
+  e.target.reset();
+  document.getElementById('reqForm').classList.remove('visible');
+  currentType = null;
+  currentDest = 'home';
+  document.querySelectorAll('.type-card').forEach(b=>b.classList.remove('active'));
+  toast(stay ? 'Housing request sent — the team will look for a host home for you.'
+              : 'Request sent! The relief team has been notified.');
+  render();
+}
+
+function update(id,patch){
+  save(load().map(r=>r.id===id?{...r,...patch,updatedAt:new Date().toISOString()}:r));
+  render();
+}
+
+function tracker(status, labels){
+  const idx=STEPS.indexOf(status);
+  return '<div class="tracker">'+STEPS.map((s,i)=>{
+    let c='t-step';
+    if(status==='delivered'||i<idx) c+=' done';
+    else if(i===idx) c+=' current';
+    if(i===STEPS.length-1) c+=' final';
+    return `<div class="${c}"><div class="tdot">${c.includes('done')?'✓':i+1}</div>${esc(labels[s])}</div>`;
+  }).join('')+'</div>';
+}
+
+document.getElementById('myList').addEventListener('click',e=>{
+  const id=e.target.dataset.received;
+  if(id){ update(id,{status:'delivered'}); toast('Marked as received. Shukriya!'); }
+});
+
+window.addEventListener('storage',e=>{ if(e.key===KEY) render(); });
+
+function render(){
+  const mine=load().filter(r=>r.userId===myId());
+  const el=document.getElementById('myList');
+  if(!mine.length){
+    el.innerHTML='<div class="empty-state">No requests yet. Choose what you need above to send one.</div>';
+    return;
+  }
+  el.innerHTML=mine.map(r=>{
+    const labels=labelsFor(r), stay=r.mode==='stay';
+    const rd = !stay && r.riderId && rider(r.riderId);
+    const hm =  stay && r.hostId   && host(r.hostId);
+    const chips = stay
+      ? [ {t:'Find a home'}, {t:r.duration}, {t:r.stayType}, {t:(r.people||1)+' people', warn:false} ]
+      : [ {t:r.catLabel}, {t:r.destLabel==='Shelter'?'Shelter delivery':'Home delivery', icon:r.destLabel==='Shelter'?'shield':'home'}, {t:r.items}, {t:URGENCY[r.urgency]||'Normal', warn:r.urgency!=='normal'} ];
+    const chipHtml = chips.filter(c=>c.t).map(c=>`<span class="item-chip${c.warn?' urgent':''}">${c.icon?ico(c.icon):''}${esc(c.t)}</span>`).join('');
+
+    const metaLine = stay
+      ? [ (r.people||1)+' people', r.prefArea?('prefers '+r.prefArea):'', r.currentArea?('currently at '+r.currentArea):'' ].filter(Boolean).join(' · ')+' · '+fmt(r.createdAt)
+      : `${esc(r.quantity||1)} item(s) for ${esc(r.people||1)} people · ${esc(r.address)} · ${fmt(r.createdAt)}`;
+
+    const whoHtml = (rd&&(r.status==='on_the_way'||r.status==='delivered'))
+      ? `<div class="who-box">${ico('scooter')} Rider: <strong>${esc(rd.name)}</strong>&nbsp;&nbsp;${esc(rd.phone)}</div>`
+      : (hm&&(r.status==='on_the_way'||r.status==='delivered'))
+      ? `<div class="who-box">${ico('key')} Host home: <strong>${esc(hm.name)}</strong>&nbsp;&nbsp;${esc(hm.phone)}</div>` : '';
+
+    const actionHtml = (!stay && r.status==='on_the_way')
+      ? `<button class="received-btn" data-received="${esc(r.id)}">✓ Mark as received</button>` : '';
+
+    return `<div class="req-card">
+      <div class="req-head">
+        <span class="req-id">${ico(r.icon||'stay')} ${esc(r.catLabel)} · ${esc(r.id)}</span>
+        <span class="badge-status ${r.status}">${esc(labels[r.status])}</span>
+      </div>
+      <div class="req-meta">${metaLine}</div>
+      <div class="req-items">${chipHtml}</div>
+      ${stay&&r.companions?`<div class="req-note">Family: ${esc(r.companions)}${r.household?' — '+esc(r.household):''}</div>`:''}
+      ${r.note?`<div class="req-note">Note: ${esc(r.note)}</div>`:''}
+      ${tracker(r.status, labels)}
+      ${whoHtml}
+      ${actionHtml}
+    </div>`;
+  }).join('');
+  hydrateIcons();
+}
+
+hydrateIcons();
+render();
+</script>
+</body>
+</html>

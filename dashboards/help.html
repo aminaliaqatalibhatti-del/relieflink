@@ -122,6 +122,25 @@
 .flood-fact  { background: rgba(255,255,255,.07); border-radius: 10px; padding: 10px 12px; }
 .flood-fact b { display: block; font-size: 18px; font-weight: 800; margin-bottom: 2px; }
 .flood-fact small { font-size: 11px; opacity: .65; }
+/* AI model (logistic regression) — same computation as the admin predictor */
+.ai-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.ai-prob { text-align: center; flex: none; width: 108px; }
+.ai-prob b { display: block; font-size: 34px; font-weight: 800; line-height: 1; }
+.ai-prob small { display: block; font-size: 10.5px; color: var(--mute); margin-top: 5px; line-height: 1.4; }
+.ai-bar { height: 8px; border-radius: 99px; background: rgba(27,58,42,.10); overflow: hidden; }
+.ai-bar-fill { height: 100%; width: 0%; border-radius: 99px; background: var(--gr); transition: width .6s ease, background .3s; }
+.ai-level { font-size: 13px; font-weight: 800; margin-top: 8px; }
+.ai-note { font-size: 10.5px; color: var(--mute); margin-top: 6px; line-height: 1.5; }
+.ai-feats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+.ai-feat { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; }
+.ai-feat-lbl { font-size: 10px; font-weight: 700; color: var(--mute); text-transform: uppercase; letter-spacing: .3px; }
+.ai-feat-val { font-size: 16px; font-weight: 800; color: var(--g); margin: 2px 0; }
+.ai-feat-sub { font-size: 10px; color: var(--mute); }
+.ai-math { background: #0F2D4A; color: #cfe4f7; border-radius: 12px; padding: 12px 14px; font-size: 11.5px; line-height: 1.75; margin-bottom: 12px; word-break: break-word; }
+.ai-math b { color: var(--gold2); }
+.ai-hist { background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF; border-radius: 10px; padding: 11px 13px; font-size: 11.5px; line-height: 1.7; margin-bottom: 12px; }
+.ai-reco { background: var(--bg); border-left: 3px solid var(--gold); border-radius: 0 10px 10px 0; padding: 11px 13px; font-size: 12px; color: var(--g2); line-height: 1.75; }
+@media (max-width: 620px){ .ai-feats { grid-template-columns: 1fr 1fr; } }
 .nearby-card {
   background: var(--card); border: 1.5px solid var(--line); border-radius: 14px;
   padding: 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 10px; transition: .2s; cursor: pointer;
@@ -213,6 +232,12 @@
 .grp .cat-grid .cat-card .cat-desc { display: block; font-size: 11px; color: var(--mute); margin-top: 2px; }
 /* Hospital / Shelter request mode: no forward picker map — the route map inside SafePoint is the only map */
 #page-request.nospot .lp-map { display: none !important; }
+  /* URGENT alerts card + notification flash */
+  .ua-row { display: flex; align-items: center; gap: 12px; }
+  .ua-row .item-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  #uaBox .lp-btn.on { background: #16a34a; color: #fff; border-color: #16a34a; }
+  .ua-flash { animation: uaFlashPulse 1.6s ease-in-out 2; outline: 2px solid #B91C1C; outline-offset: 3px; border-radius: 12px; }
+  @keyframes uaFlashPulse { 0%,100% { background: rgba(185,28,28,.06); } 50% { background: rgba(185,28,28,.20); } }
 .cat-card:hover, .cat-card.active { transform: translateY(-3px); border-color: var(--gold); box-shadow: 0 12px 26px rgba(27,58,42,.14); background: var(--card); }
 /* ── Home: grouped feature sections + emergency group ── */
 .home-groups { display: flex; flex-direction: column; gap: 22px; }
@@ -402,7 +427,7 @@
         <div class="grp-head"><h4>Get supplies</h4><span class="grp-sub">Basic needs for you and your family</span></div>
         <div class="cat-grid">
           <div class="cat-card" onclick="location.href='food.html'"><div class="cat-icon"><i data-i="drop"></i></div><div class="cat-body"><h4>Food &amp; Clean Water</h4><p class="cat-desc">Request meals or drinking water</p></div></div>
-          <div class="cat-card" onclick="selectCat(this,'Shelter & Accommodation')"><div class="cat-icon"><i data-i="home"></i></div><div class="cat-body"><h4>Shelter &amp; Accommodation</h4></div></div>
+          <div class="cat-card" onclick="location.href='home.html'"><div class="cat-icon"><i data-i="home"></i></div><div class="cat-body"><h4>Home Essentials</h4><p class="cat-desc">Find a host home to stay in, or get supplies delivered</p></div></div>
           <div class="cat-card" onclick="location.href='clothes.html'"><div class="cat-icon"><i data-i="bag"></i></div><div class="cat-body"><h4>Clothing &amp; Supplies</h4><p class="cat-desc">Clothes, blankets &amp; essentials</p></div></div>
         </div>
       </section>
@@ -410,9 +435,9 @@
       <section class="grp fade-up">
         <div class="grp-head"><h4>Recover</h4><span class="grp-sub">After the water goes down</span></div>
         <div class="cat-grid">
-          <div class="cat-card" onclick="selectCat(this,'Home & Damage Recovery')"><div class="cat-icon"><i data-i="tools"></i></div><div class="cat-body"><h4>Home &amp; Damage Recovery</h4></div></div>
-          <div class="cat-card" onclick="selectCat(this,'Missing Persons')"><div class="cat-icon"><i data-i="search"></i></div><div class="cat-body"><h4>Missing Persons</h4></div></div>
-          <div class="cat-card" onclick="navigate('myrequests')"><div class="cat-icon"><i data-i="list"></i></div><div class="cat-body"><h4>Aid Tracking</h4></div></div>
+          <div class="cat-card" onclick="location.href='recovery.html'"><div class="cat-icon"><i data-i="tools"></i></div><div class="cat-body"><h4>Home &amp; Damage Recovery</h4><p class="cat-desc">Report damage, a repair team is assigned</p></div></div>
+          <div class="cat-card" onclick="location.href='missing.html'"><div class="cat-icon"><i data-i="search"></i></div><div class="cat-body"><h4>Missing Persons</h4><p class="cat-desc">File a report and start the search</p></div></div>
+          <div class="cat-card" onclick="location.href='tracking.html'"><div class="cat-icon"><i data-i="list"></i></div><div class="cat-body"><h4>Aid Tracking</h4><p class="cat-desc">Follow every request you have sent</p></div></div>
         </div>
       </section>
 
@@ -589,6 +614,22 @@
             <div class="flood-fact"><b id="flRec">–</b><small>Recommendation</small></div>
           </div>
         </div>
+        <!-- AI MODEL — logistic-regression probability (same model as the admin predictor) -->
+        <div class="card fade-up" style="margin-bottom:16px">
+          <div class="card-header"><h3><i data-i="chart"></i> AI Prediction Model</h3><span class="badge-sm">Logistic regression · 4 features · live</span></div>
+          <div class="ai-row">
+            <div class="ai-prob"><b id="aiPct">&ndash;</b><small>Flood probability &mdash; next 5 days</small></div>
+            <div style="flex:1;min-width:200px">
+              <div class="ai-bar"><div class="ai-bar-fill" id="aiBar"></div></div>
+              <div class="ai-level" id="aiLevel">Calculating&hellip;</div>
+              <div class="ai-note">Model probability from live rainfall &amp; humidity &mdash; read alongside the river-risk gauge above.</div>
+            </div>
+          </div>
+          <div class="ai-feats" id="aiFeats"></div>
+          <div class="ai-math" id="aiMath"></div>
+          <div class="ai-hist" id="aiHist" style="display:none"></div>
+          <div class="ai-reco" id="aiReco"></div>
+        </div>
         <div class="card fade-up">
           <div class="card-header"><h3>Safety Recommendations</h3><span class="badge-sm">For your risk level</span></div>
           <div id="safetyTips"></div>
@@ -735,6 +776,7 @@
 
   <!-- NOTIFICATIONS -->
   <div id="page-notifications" class="hide">
+    <div class="card fade-up" id="uaBox" style="margin-bottom:14px"></div>
     <div class="card fade-up">
       <div class="card-header"><h3>Notifications</h3><span class="badge-sm">Live alerts + earthquakes</span></div>
       <div id="notifList"></div>
@@ -1083,7 +1125,7 @@ function renderMyReqs() {
         var tag = (r._delivered === false)
           ? '<span class="tag" style="background:rgba(239,91,91,.18);color:#f87171">Not delivered</span>'
           : '<span class="tag ' + SC[r.status] + '">' + ST[r.status] + '</span>';
-        return '<div class="item"><div class="item-icon" style="font-size:22px">' + (CATS[r.cat]||'') + '</div>'
+        return '<div class="item" data-id="' + (r.id || r.clientId || '') + '"><div class="item-icon" style="font-size:22px">' + (CATS[r.cat]||'') + '</div>'
           + '<div class="t"><b>' + r.cat + '</b><small>' + r.loc + (r.people ? ' · ' + r.people + ' people' : '') + ' · ' + r.date + '</small>' + reqTriageHTML(r) + '</div>'
           + tag + '</div>';
       }).join('')
@@ -1760,7 +1802,7 @@ function navigate(page) {
     if (p === 'flood')         { initFloodMap(); loadFloodLive(); }
     if (p === 'route')         initRouteMap();
     if (p === 'emergency')     renderContacts();
-    if (p === 'notifications') { renderNotifs(false); loadNotifsLive(); }
+    if (p === 'notifications') { renderNotifs(false); loadNotifsLive(); uaRenderCard(); }
     if (p === 'myrequests')    renderMyReqs();
     if (p === 'profile')        renderProfile();
     if (p === 'request')       { renderActive(); LP.init(); applyCatMode(); }
@@ -1789,6 +1831,114 @@ function filterCats(q) {
   });
 }
 
+/* ═ URGENT ALERTS — service worker + Notification API, so a status change or an
+      admin escalation to URGENT can pop a system notification and open the app on that request. ═ */
+var UA = { reg:null, timer:null, intervalMs:45000, stateKey:'rl_ua_state', enabledKey:'rl_ua_enabled' };
+function uaGetState(){ try{ return JSON.parse(localStorage.getItem(UA.stateKey)||'{}')||{}; }catch(e){ return {}; } }
+function uaSetState(s){ try{ localStorage.setItem(UA.stateKey, JSON.stringify(s)); }catch(e){} }
+function uaIsEnabled(){ try{ return localStorage.getItem(UA.enabledKey)==='1'; }catch(e){ return false; } }
+function uaSetEnabled(v){ try{ localStorage.setItem(UA.enabledKey, v?'1':'0'); }catch(e){} }
+
+function uaRenderCard(){
+  var box = RL_$('uaBox'); if (!box) return;
+  var perm = (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported';
+  var on = uaIsEnabled() && perm === 'granted';
+  var msg =
+    perm === 'unsupported' ? 'This browser does not support notifications.' :
+    perm === 'denied'      ? 'Notifications are blocked — allow them in your browser settings to receive alerts.' :
+    on                     ? 'ON — you will be alerted when your request status changes or is escalated to URGENT.' :
+                             'Tap Enable to get an instant alert when your request is picked up or marked URGENT. Tapping the alert opens the app on that request.';
+  box.innerHTML = '<div class="ua-row"><div class="item-icon" style="background:rgba(185,28,28,.14);color:#B91C1C;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px">' + RL_Icon('flame') + '</div>'
+    + '<div style="flex:1;min-width:0"><b>URGENT alerts</b><p class="mute" style="font-size:12px;margin:3px 0 0">' + msg + '</p></div>'
+    + (perm === 'granted'
+        ? '<button class="btn-primary" style="padding:9px 14px;font-size:12.5px;' + (on ? 'background:#0f766e' : '') + '" onclick="' + (on ? 'disableUrgentAlerts' : 'enableUrgentAlerts') + '()">' + (on ? 'Turn off' : 'Enable') + '</button>'
+        : perm !== 'unsupported' ? '<button class="btn-primary" style="padding:9px 14px;font-size:12.5px" onclick="enableUrgentAlerts()">Enable</button>'
+        : '') + '</div>';
+  RL_Icons();
+}
+
+function enableUrgentAlerts(){
+  if (typeof Notification === 'undefined'){ RL_Toast('Notifications are not supported in this browser'); return; }
+  var go = function(perm){
+    if (perm !== 'granted'){ RL_Toast('Enable notifications in browser settings to receive URGENT alerts'); uaRenderCard(); return; }
+    uaSetEnabled(true); uaRenderCard();
+    pollUrgent(true);
+    if (!UA.timer) UA.timer = setInterval(function(){ pollUrgent(false); }, UA.intervalMs);
+    RL_Toast('URGENT alerts are ON');
+  };
+  if (Notification.permission === 'granted') go('granted');
+  else if (Notification.permission === 'denied'){ RL_Toast('Notifications are blocked — allow them in browser settings'); uaRenderCard(); }
+  else Notification.requestPermission().then(go);
+}
+function disableUrgentAlerts(){
+  uaSetEnabled(false);
+  if (UA.timer){ clearInterval(UA.timer); UA.timer = null; }
+  uaRenderCard(); RL_Toast('URGENT alerts are OFF');
+}
+
+function uaMatch(row, mine){
+  if (!row) return false;
+  var rid = String(row.id||''), rc = String(row.clientId||''), rp = String(row.phone||'').replace(/\D/g,'');
+  for (var i=0;i<mine.length;i++){
+    var m = mine[i]; if (!m) continue;
+    if (rid && String(m.id)===rid) return true;
+    if (rc && String(m.clientId)===rc) return true;
+    if (rp && m.phone){ var mp = String(m.phone).replace(/\D/g,''); if (mp && mp===rp) return true; }
+  }
+  return false;
+}
+function pollUrgent(seed){
+  if (!uaIsEnabled()) return;
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  var sUid = (window.RL_Auth && RL_Auth.user() || {}).id;
+  var url = '/help-requests' + (sUid ? '?user_id=' + encodeURIComponent(sUid) : '');
+  RL_Get(url).then(function(rows){
+    if (!Array.isArray(rows)) return;
+    var mine = myReqs || [];
+    if (!sUid && !mine.length) return;
+    var state = uaGetState();
+    var fresh = Object.keys(state).length === 0;
+    rows.forEach(function(row){
+      if (!sUid && !uaMatch(row, mine)) return;             /* guests: only their own locally-known requests */
+      var key = String(row.id || row.clientId || ((row.created_at||'')+'-'+(row.category||'')));
+      var prev = state[key];
+      var now = { status: row.status|0, urgent: !!row.urgent };
+      state[key] = now;
+      if (seed || fresh) return;                            /* first sweep just seeds, no spam */
+      var escalated = prev && (now.status > prev.status || (now.urgent && !prev.urgent));
+      var newUrgent = !prev && now.urgent;
+      if (escalated || newUrgent){
+        var title = now.urgent ? 'URGENT: ' + (row.category || 'Help request') : 'Update: ' + (row.category || 'Help request');
+        var body  = 'Status: ' + (ST[row.status|0] || row.status) + (row.city ? ' \u00b7 ' + row.city : '');
+        uaNotify(title, body, row.id);
+      }
+    });
+    uaSetState(state);
+  }).catch(function(){});
+}
+function uaNotify(title, body, id){
+  var data = { id: id };
+  if (UA.reg && UA.reg.showNotification){
+    UA.reg.showNotification(title, { body: body, tag: 'rl-urgent-' + id, data: data });
+  } else if (typeof Notification !== 'undefined' && Notification.permission === 'granted'){
+    try{ var n = new Notification(title, { body: body, tag: 'rl-urgent-' + id }); n.onclick = function(){ focusAndOpen(id); }; }catch(e){}
+  }
+}
+function focusAndOpen(id){
+  try{ location.hash = 'urgent=' + (id||''); }catch(e){}
+  handleUrgentHash();
+}
+function handleUrgentHash(){
+  var h = String(location.hash||''); var m = /[#&]urgent=([^&]+)/.exec(h);
+  if (!m) return;
+  var id = decodeURIComponent(m[1]);
+  navigate('myrequests');
+  setTimeout(function(){
+    var node = document.querySelector('#myReqList [data-id="' + id.replace(/"/g,'') + '"]');
+    if (node){ node.classList.add('ua-flash'); try{ node.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){ node.scrollIntoView(); } setTimeout(function(){ node.classList.remove('ua-flash'); }, 3200); }
+  }, 250);
+}
+
 /* ── BOOT ── */
 var u = RL_BootUser({ defaultName: 'User', defaultRole: 'help' });
 if (u && u.name)  { var rn=RL_$('reqName');  if(rn) rn.value = u.name; }
@@ -1804,6 +1954,32 @@ loadHeroLive();
 loadNotifsLive();
 var _cpMic = RL_$('cpMic'); if (_cpMic) _cpMic.addEventListener('click', cpMicToggle);
 navigate('home'); // apply correct initial chrome (hero + bottom SOS bar, no top emergency card)
+uaRenderCard();
+/* register the service worker so Notification events can wake the app */
+if ('serviceWorker' in navigator){
+  navigator.serviceWorker.register('help-sw.js').then(function(reg){
+    UA.reg = reg;
+    if (navigator.serviceWorker.ready) navigator.serviceWorker.ready.then(function(r){ UA.reg = r; });
+    return navigator.serviceWorker.ready;
+  }).then(function(reg){
+    UA.reg = reg || UA.reg;
+    if (reg && reg.addEventListener) reg.addEventListener('message', function(ev){
+      var m = ev.data || {}; if (m.type === 'rl:open-urgent') focusAndOpen(m.id);
+    });
+    if (uaIsEnabled() && typeof Notification !== 'undefined' && Notification.permission === 'granted'){
+      pollUrgent(true);
+      if (!UA.timer) UA.timer = setInterval(function(){ pollUrgent(false); }, UA.intervalMs);
+    }
+  }).catch(function(){
+    /* SW unavailable (insecure origin etc.) — fall back to in-page Notification + polling */
+    if (uaIsEnabled() && typeof Notification !== 'undefined' && Notification.permission === 'granted'){
+      pollUrgent(true);
+      if (!UA.timer) UA.timer = setInterval(function(){ pollUrgent(false); }, UA.intervalMs);
+    }
+  });
+}
+window.addEventListener('hashchange', handleUrgentHash);
+setTimeout(handleUrgentHash, 400);   /* if opened via a notification click */
 
 /* ── #2 Offline SOS — flush any device-saved requests the moment a connection returns ── */
 try { window.addEventListener('online', function(){ setTimeout(sosFlush, 1200); }); } catch(e){}
@@ -1851,6 +2027,109 @@ function renderSafetyTips(pct) {
   }).join('');
   RL_Icons();
 }
+/* ── AI PREDICTION MODEL — logistic regression, same weights & logic as the admin predictor ──
+   Features: f1 cumulative 5-day rainfall (mm) · f2 peak 24h rainfall (mm)
+             f3 humidity (%) · f4 monsoon season (Jun–Sep) binary.
+   Inputs come from the same live Open-Meteo feeds this page already reads. */
+var FLOOD_MODEL = { w0:-7.2, w1:0.028, w2:0.045, w3:0.035, w4:1.1 };
+var AI_LEVELS = [
+  [70, 'SEVERE — Evacuate low-lying areas', 'var(--r)'],
+  [50, 'HIGH — Prepare to evacuate',        'var(--o)'],
+  [30, 'MODERATE — Stay alert',             'var(--y)'],
+  [15, 'LOW — Monitor',                     'var(--b)'],
+  [0,  'MINIMAL',                           'var(--gr)']
+];
+var HISTORICAL_FLOODS = {
+  lahore:     [{ev:'Jul 2018 Lahore urban flood', mm:291, note:'Record monsoon downpour — city-wide urban flooding'},{ev:'Sep 1996 Lahore flood', mm:300, note:'One of worst floods in city history'}],
+  karachi:    [{ev:'Jul-Aug 2022 Karachi floods', mm:400, note:'400mm+ rain spells — severe urban flooding'}],
+  islamabad:  [{ev:'Jul 2015 Nullah Lai flood', mm:165, note:'165mm/24h — Nullah Lai burst its banks'},{ev:'Aug 2013 twin-city flood', mm:120, note:'Islamabad & Rawalpindi heavily flooded'}],
+  peshawar:   [{ev:'Jul-Aug 2010 KPK floods', mm:280, note:'Historic Kabul river & KPK-wide floods'}],
+  multan:     [{ev:'Sep 2014 Chenab flood', mm:280, note:'Chenab basin flood — Marala peak 1.1M cusecs'}],
+  bahawalpur: [{ev:'Aug 2023 Sutlej flood', mm:250, note:'Sutlej high flood after upstream dam releases'},{ev:'Aug 2022 Pakistan floods', mm:300, note:'National floods — record monsoon rainfall'}],
+  gujranwala: [{ev:'Sep 2014 Chenab flood', mm:280, note:'Chenab basin flooding across Punjab'}],
+  sukkur:     [{ev:'Aug 2022 Indus flood', mm:300, note:'Indus in historic high flood at Guddu/Sukkur'}],
+  rawalpindi: [{ev:'Aug 2013 twin-city flood', mm:120, note:'Islamabad & Rawalpindi heavily flooded'}],
+  hyderabad:  [{ev:'Aug 2022 Sindh floods', mm:300, note:'Record monsoon rainfall across lower Sindh'}]
+};
+function sigmoid(z){ return 1/(1+Math.exp(-z)); }
+function aiLevel(pct){ for (var i=0;i<AI_LEVELS.length;i++){ if (pct>=AI_LEVELS[i][0]) return AI_LEVELS[i]; } return AI_LEVELS[AI_LEVELS.length-1]; }
+/* Feature extraction from the live forecast — no synthetic values */
+function aiExtract(wx, rn){
+  var nowD = new Date().toISOString().slice(0,10);
+  var t = (rn&&rn.daily&&rn.daily.time) || [], p = (rn&&rn.daily&&rn.daily.precipitation_sum) || [];
+  var cum5 = 0, peak24 = 0, days = 0;
+  for (var i=0;i<t.length && days<5;i++){
+    if (t[i] < nowD) continue;
+    var v = +p[i] || 0; cum5 += v; if (v > peak24) peak24 = v; days++;
+  }
+  var hum = (wx && wx.current && wx.current.relative_humidity_2m != null) ? +wx.current.relative_humidity_2m : null;
+  if (!days && hum == null) return null;                       /* nothing real to score */
+  var month = new Date().getMonth()+1;
+  return { cum5:+cum5.toFixed(1), peak24:+peak24.toFixed(1), humidity:hum,
+           days:days, monsoon:(month>=6 && month<=9) ? 1 : 0 };
+}
+function runAiPrediction(wx, rn, placeName){
+  var box = RL_$('aiPct'); if (!box) return;
+  var f = aiExtract(wx, rn);
+  if (!f) {
+    box.textContent = '—'; box.style.color = 'var(--mute)';
+    RL_$('aiLevel').innerHTML = 'Insufficient live data';
+    RL_$('aiFeats').innerHTML = '';
+    RL_$('aiMath').innerHTML = 'The rainfall / humidity sources returned no data for this point, so the model has not been given an estimate.';
+    RL_$('aiBar').style.width = '0%';
+    RL_$('aiHist').style.display = 'none';
+    RL_$('aiReco').innerHTML = '<b>Recommended actions</b><br>• Live sources unavailable — recheck in a few minutes<br>• Follow NDMA / PDMA advisories in the meantime';
+    return;
+  }
+  var w = FLOOD_MODEL;
+  var z = w.w0 + w.w1*f.cum5 + w.w2*f.peak24 + w.w3*(f.humidity||0) + w.w4*f.monsoon;
+  var prob = sigmoid(z), pRaw = prob*100, pct = Math.round(pRaw);
+  var lv = aiLevel(pRaw);
+  box.textContent = (pRaw<10 ? pRaw.toFixed(1) : Math.round(pRaw)) + '%'; box.style.color = lv[2];
+  RL_$('aiLevel').innerHTML = 'Risk Level: <span style="color:'+lv[2]+'">'+lv[1]+'</span>';
+  var bar = RL_$('aiBar'); bar.style.width = Math.max(1,pRaw) + '%'; bar.style.background = lv[2];
+  RL_$('aiFeats').innerHTML =
+    featCard('f1 · Cumulative 5-day rain', f.cum5.toFixed(1)+' mm', 'w1='+w.w1+' · contribution '+(w.w1*f.cum5).toFixed(2))
+   +featCard('f2 · Peak 24h rain', f.peak24.toFixed(1)+' mm', 'w2='+w.w2+' · contribution '+(w.w2*f.peak24).toFixed(2))
+   +featCard('f3 · Humidity', f.humidity==null?'n/a':f.humidity+'%', 'w3='+w.w3+' · contribution '+(w.w3*(f.humidity||0)).toFixed(2))
+   +featCard('f4 · Monsoon season', f.monsoon?'Yes (Jun–Sep)':'No', 'w4='+w.w4+' · contribution '+(w.w4*f.monsoon).toFixed(2))
+   +featCard('Forecast days used', f.days, 'daily Open-Meteo steps')
+   +featCard('Wettest single day', f.peak24.toFixed(1)+' mm', 'drives f2');
+  RL_$('aiMath').innerHTML =
+    '<b>'+esc(placeName||'This location')+'</b> — Logistic Regression computation:<br>'
+   +'z = w&#8320; + w&#8321;·f&#8321; + w&#8322;·f&#8322; + w&#8323;·f&#8323; + w&#8324;·f&#8324;<br>'
+   +'z = ('+w.w0+') + ('+w.w1+'×'+f.cum5.toFixed(1)+') + ('+w.w2+'×'+f.peak24.toFixed(1)+') + ('+w.w3+'×'+(f.humidity||0)+') + ('+w.w4+'×'+f.monsoon+')<br>'
+   +'z = <b>'+z.toFixed(3)+'</b><br>'
+   +'P(flood) = 1/(1+e^(&minus;z)) = <b>'+(prob*100).toFixed(1)+'%</b><br>'
+   +'<span style="opacity:.7">Data: Open-Meteo daily forecast · Weights calibrated on FFD/PMD Pakistan flood thresholds (150mm+ cumulative = high alert).</span>';
+  renderAiHistory(f, placeName);
+  var recos = pct>=70
+    ? ['Move now from low-lying / riverbank areas','Emergency kit ready — documents, water, medicines','Call Rescue 1122 if anyone is trapped','Check the nearest shelter on the Nearby Help page']
+    : pct>=50
+    ? ['Charge phones and prepare a go-bag','Store clean drinking water for 2–3 days','Watch live alerts — they auto-refresh every 5 minutes','Finalise the family evacuation plan']
+    : pct>=30
+    ? ['Keep rain gear and torches ready','Avoid nullah and river crossings during rain','Check your route in the Safe Route Planner']
+    : ['Normal conditions — no immediate action needed','Monitoring continues while this page is open'];
+  RL_$('aiReco').innerHTML = '<b>Recommended actions</b><br>' + recos.map(function(x){ return '• '+x; }).join('<br>');
+}
+function featCard(lbl, val, sub){
+  return '<div class="ai-feat"><div class="ai-feat-lbl">'+lbl+'</div><div class="ai-feat-val">'+esc(val)+'</div><div class="ai-feat-sub">'+esc(sub)+'</div></div>';
+}
+/* Compare the forecast peak against documented floods for the same city */
+function renderAiHistory(f, placeName){
+  var el = RL_$('aiHist'); if (!el) return;
+  var key = String(placeName||'').toLowerCase().split(/[\s,(]+/)[0].replace(/[^a-z]/g,'');
+  var hist = HISTORICAL_FLOODS[key];
+  if (!hist || !hist.length){ el.style.display='none'; el.innerHTML=''; return; }
+  var disp = (window.RL_LIVE && RL_LIVE.cap) ? RL_LIVE.cap(key) : key;
+  el.style.display = '';
+  el.innerHTML = '<b>Historical comparison — real flood events ('+esc(disp)+'):</b><br>' + hist.map(function(hv){
+    var pctVs = f.peak24 > 0 ? Math.round(f.peak24 / hv.mm * 100) : 0;
+    return '• <b>'+esc(hv.ev)+'</b> — '+hv.mm+'mm in 24h ('+esc(hv.note)+')<br>'
+      + '&nbsp;&nbsp;&#8627; Current forecast peak 24h: <b>'+f.peak24.toFixed(1)+'mm = '+pctVs+'%</b> of that event'
+      + (pctVs>=80 ? ' — <b style="color:var(--r)">approaching historical flood levels</b>' : pctVs>=50 ? ' — <b style="color:var(--o)">significant portion</b>' : '');
+  }).join('<br>') + '<br><small style="opacity:.7">Sources: PMD / FFD / press reports of documented events.</small>';
+}
 function liveArea(){ var uu=RL_GetUser()||{}; return (window.RL_LIVE && RL_LIVE.geo(uu.area||uu.city)) || {lat:29.1044,lng:70.3302,name:'Rajanpur'}; }
 function loadFloodLive(){
   if(!window.RL_LIVE) return; var g=liveArea(); predictFlood(g.lat,g.lng,g.name+', Pakistan');
@@ -1881,6 +2160,7 @@ function predictFlood(lat,lng,name){
     RL_LIVE.rainSeries(lat,lng).catch(function(){return null;})
   ]).then(function(a){
     applyRisk(RL_LIVE.risk(a[0],a[1]), name);
+    runAiPrediction(a[0], a[3], name);
     renderFloodGraph(a[2],a[3]);
     updateFloodMarker();
     floodNote('Model: 7-day river discharge (Flood-API) + rainfall (Open-Meteo), calibrated on Pakistan thresholds for '+name+'.');

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Aid Tracking | ReliefLink</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>/* ── TOKENS ── */
+:root{--bg:#F5EEDB;--card:#FFFCF4;--g:#1B3A2A;--g2:#2F5A42;--g3:#0f2619;--gold:#C9A227;--gold2:#E8C86A;--ink:#1B3A2A;--mute:#8a866f;--line:#EADFC2;--sh:0 4px 24px rgba(27,58,42,.08);--p:#7C6CF0;--b:#4C8DF6;--gr:#3CC08E;--y:#F5B83D;--o:#F58A3D;--r:#EF5B5B;--rad:16px;--sidebar:250px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{background:var(--bg);scroll-behavior:smooth;}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:14px;color:var(--ink);background:var(--bg);min-height:100vh;}
+a{text-decoration:none;color:inherit;}button{font-family:inherit;cursor:pointer;}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;pointer-events:none;}
+.field-input{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px;font:inherit;font-size:14px;resize:vertical;outline:none;transition:.2s;background:var(--bg);color:var(--ink);}
+.field-input:focus{border-color:var(--gold);}
+.hide{display:none!important;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.fade-up{animation:fadeUp .5s ease both;}
+</style>
+<style>
+/* ── Page-specific ── */
+.page-wrap { max-width:760px; margin:0 auto; padding:28px 16px 80px; }
+.page-header { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+.page-header .back-btn {
+  width:38px; height:38px; border-radius:50%; background:var(--card); border:1px solid var(--line);
+  display:grid; place-items:center; flex:none; cursor:pointer; color:var(--g);
+}
+.page-header .back-btn:hover { background:var(--gold); color:var(--g); }
+.page-title { font-size:22px; font-weight:800; color:var(--g); }
+.page-sub { font-size:13px; color:var(--mute); margin-bottom:22px; }
+
+/* summary */
+.stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:22px; }
+.stat-box { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; text-align:center; }
+.stat-box b { display:block; font-size:1.6rem; font-weight:800; color:var(--g); }
+.stat-box span { font-size:11.5px; color:var(--mute); }
+
+/* filter tabs */
+.filter-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; }
+.ftab {
+  font:600 12.5px 'Plus Jakarta Sans',sans-serif; padding:6px 14px; border-radius:99px;
+  border:1.5px solid var(--line); background:var(--card); color:var(--mute); cursor:pointer;
+  transition:all .15s;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.ftab svg.i { width:14px; height:14px; }
+.ftab:hover, .ftab.active { background:var(--g); color:#F5EEDB; border-color:var(--g); }
+
+/* request card */
+.req-card  { background:var(--card); border:1px solid var(--line); border-radius:var(--rad); padding:18px; margin-bottom:12px; }
+.req-head  { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+.req-id    { font-size:13.5px; font-weight:800; color:var(--g); }
+.req-svc   { font-size:11px; font-weight:700; color:var(--mute); text-transform:uppercase; letter-spacing:.05em;
+             display:flex; align-items:center; gap:6px; margin-bottom:3px; }
+.req-svc svg.i { width:14px; height:14px; color:var(--g2); }
+.req-meta  { font-size:12.5px; color:var(--mute); margin-bottom:4px; display:flex; align-items:flex-start; gap:6px; }
+.req-meta svg.i { width:14px; height:14px; flex:none; margin-top:1px; color:var(--g2); }
+.req-items { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 4px; }
+.item-chip {
+  font-size:12px; font-weight:600; padding:3px 10px; border-radius:99px;
+  background:var(--bg); border:1px solid var(--line); color:var(--g);
+  display:inline-flex; align-items:center; gap:5px;
+}
+.item-chip svg.i { width:13px; height:13px; }
+.item-chip.urgent { background:#FEE2E2; border-color:#FCA5A5; color:#991B1B; }
+
+.badge-status { font-size:11.5px; font-weight:700; padding:3px 11px; border-radius:99px; background:var(--line); color:var(--g); }
+.badge-status.sent       { background:#EEF2FF; color:#4338CA; }
+.badge-status.approved   { background:#ECFDF5; color:#065F46; }
+.badge-status.on_the_way { background:#FEF3C7; color:#92400E; }
+.badge-status.delivered  { background:#D1FAE5; color:#065F46; }
+
+/* tracker */
+.tracker { display:grid; grid-template-columns:repeat(4,1fr); margin:14px 0 8px; }
+.t-step  { text-align:center; position:relative; font-size:10px; color:var(--mute); }
+.t-step .tdot {
+  width:24px; height:24px; border-radius:50%; background:var(--line); color:#fff;
+  display:grid; place-items:center; margin:0 auto 6px; font-size:11px;
+  position:relative; z-index:1; font-weight:700;
+}
+.t-step::before { content:""; position:absolute; top:11px; left:-50%; width:100%; height:3px; background:var(--line); }
+.t-step:first-child::before { display:none; }
+.t-step.done .tdot            { background:var(--g); }
+.t-step.done::before,
+.t-step.current::before       { background:var(--g); }
+.t-step.current .tdot         { background:var(--gold); box-shadow:0 0 0 4px #FFF0B3; }
+.t-step.done,.t-step.current  { color:var(--g); font-weight:700; }
+.t-step.final.done .tdot      { background:var(--gr); }
+
+.agent-info    { display:flex; align-items:center; gap:8px; background:var(--bg); border-radius:10px; padding:10px 13px; margin-top:10px; font-size:13px; }
+.agent-info svg.i { width:16px; height:16px; color:var(--g2); flex:none; }
+.agent-info strong { color:var(--g); }
+.received-btn  { margin-top:10px; padding:9px 18px; border:none; border-radius:10px; background:var(--gr); color:#fff; font:700 13px 'Plus Jakarta Sans',sans-serif; cursor:pointer;
+                 display:inline-flex; align-items:center; gap:7px; }
+.received-btn svg.i { width:15px; height:15px; }
+.received-btn:hover { background:#2aab78; }
+.link-btn      { display:inline-block; margin-top:10px; padding:9px 18px; border:1.5px solid var(--line); border-radius:10px; background:var(--card); color:var(--g); font:700 13px 'Plus Jakarta Sans',sans-serif; cursor:pointer; }
+.link-btn:hover { border-color:var(--gold); background:#FFF8E1; }
+
+.empty-state   { text-align:center; color:var(--mute); padding:30px 16px; border:1px dashed var(--line); border-radius:var(--rad); font-size:13.5px; }
+.empty-links   { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:14px; }
+.empty-links a { font:600 12.5px 'Plus Jakarta Sans',sans-serif; padding:7px 14px; border-radius:99px;
+                 border:1.5px solid var(--line); background:var(--card); color:var(--g);
+                 display:inline-flex; align-items:center; gap:6px; }
+.empty-links a svg.i { width:14px; height:14px; color:var(--g2); }
+.empty-links a:hover { border-color:var(--gold); background:#FFF8E1; }
+
+.rl-toast {
+  position:fixed; bottom:calc(20px + env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%);
+  background:var(--g); color:#F5EEDB; padding:10px 20px; border-radius:10px;
+  font-size:13.5px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .22s;
+  white-space:nowrap; z-index:999;
+}
+.rl-toast.show { opacity:1; }
+
+@media(max-width:560px){
+  .stats-row { grid-template-columns:repeat(3,1fr); gap:8px; }
+  .stat-box b { font-size:1.3rem; }
+  .tracker   { font-size:9px; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="page-header">
+    <button class="back-btn" onclick="history.back()" title="Go back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <h1 class="page-title">Aid Tracking</h1>
+  </div>
+  <p class="page-sub">All the requests you have sent — food, clothing, home supplies, a home to stay in, house recovery and missing person reports — in one list.</p>
+
+  <!-- Summary -->
+  <div class="stats-row" id="statsRow"></div>
+
+  <!-- Service filter -->
+  <div class="filter-tabs" id="svcTabs">
+    <button class="ftab active" data-svc="all" onclick="setSvc('all',this)">All aid</button>
+    <button class="ftab" data-svc="food"     onclick="setSvc('food',this)"><i data-i="drop"></i> Food &amp; Water</button>
+    <button class="ftab" data-svc="clothes"  onclick="setSvc('clothes',this)"><i data-i="bag"></i> Clothing</button>
+    <button class="ftab" data-svc="home"     onclick="setSvc('home',this)"><i data-i="home"></i> Home Supplies</button>
+    <button class="ftab" data-svc="stay"     onclick="setSvc('stay',this)"><i data-i="stay"></i> Find a Home</button>
+    <button class="ftab" data-svc="recovery" onclick="setSvc('recovery',this)"><i data-i="tools"></i> Recovery</button>
+    <button class="ftab" data-svc="missing"  onclick="setSvc('missing',this)"><i data-i="search"></i> Missing</button>
+  </div>
+
+  <!-- Status filter -->
+  <div class="filter-tabs">
+    <button class="ftab active" data-state="all"       onclick="setState('all',this)">All</button>
+    <button class="ftab"        data-state="open"      onclick="setState('open',this)">Still running</button>
+    <button class="ftab"        data-state="delivered" onclick="setState('delivered',this)">Completed</button>
+  </div>
+
+  <!-- List -->
+  <div id="trackList"></div>
+
+</div>
+<div class="rl-toast" id="toast"></div>
+
+<script>
+const STEPS = ['sent','approved','on_the_way','delivered'];
+
+/* Simple line icons — same style as the dashboard icon set */
+const IP = {
+  stay:    'M3 11l9-8 9 8 M5 10v10h14V10 M10 20v-4a2 2 0 0 1 4 0v4',
+  home:    'M3 11l9-8 9 8 M5 10v10h14V10',
+  bag:     'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z M3 6h18 M16 10a4 4 0 0 1-8 0',
+  drop:    'M12 2.7s6 6.3 6 11.3a6 6 0 0 1-12 0c0-5 6-11.3 6-11.3z',
+  tools:   'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3-3a6 6 0 0 1-7 7l-1.4 1.4a1 1 0 0 1-1.4 0L7 10.4a1 1 0 0 1 0-1.4L8.4 7.6a6 6 0 0 1 7-7z',
+  search:  'M21 21l-4.3-4.3 M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z',
+  shield:  'M12 2l7 4v6c0 5.2-4 9.6-7 11-3-1.4-7-5.8-7-11V6z',
+  scooter: 'M4 17a3 3 0 1 0 6 0 3 3 0 0 0-6 0z M15 17a3 3 0 1 0 6 0 3 3 0 0 0-6 0z M7 17h8 M10 8h4l2 9 M6 8h5l1 9',
+  key:     'M15 8a4 4 0 1 0-3.5 4L14 15h3v3h3v-3l-2.5-2.5A4 4 0 0 0 15 8z',
+  users:   'M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2 M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M21 21v-2a4 4 0 0 0-3-3.9 M16 3.1a4 4 0 0 1 0 7.8',
+  phone:   'M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .8 2.9a2 2 0 0 1-.5 2.1L8.1 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.4 1.9.7 2.9.8a2 2 0 0 1 1.6 1.9z',
+  note:    'M12 20h9 M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z',
+  check:   'M20 6 9 17l-5-5'
+};
+function ico(n){ return IP[n] ? '<svg class="i" viewBox="0 0 24 24"><path d="'+IP[n]+'"/></svg>' : ''; }
+function hydrateIcons(){
+  document.querySelectorAll('i[data-i]').forEach(function(e){
+    const s = ico(e.dataset.i); if (s) e.outerHTML = s;
+  });
+}
+
+/* Riders / teams / host homes — shared across the service pages */
+const AGENTS = {
+  r1:{name:'Ali Raza',phone:'0300-1111111',tag:'Rider',icon:'scooter'},
+  r2:{name:'Hamza Khan',phone:'0301-2222222',tag:'Rider',icon:'scooter'},
+  r3:{name:'Sana Malik',phone:'0302-3333333',tag:'Rider',icon:'scooter'},
+  t1:{name:'Recovery Team 1 — Jadoon',phone:'0300-7777701',tag:'Repair team',icon:'tools'},
+  t2:{name:'Recovery Team 2 — Al-Khidmat',phone:'0301-7777702',tag:'Repair team',icon:'tools'},
+  t3:{name:'PDMA Repair Crew 3',phone:'0302-7777703',tag:'Repair team',icon:'tools'},
+  s1:{name:'Search Circle 1 — Rawalpindi',phone:'0300-8888801',tag:'Search team',icon:'search'},
+  s2:{name:'Rescue Volunteers — Islamabad',phone:'0301-8888802',tag:'Search team',icon:'search'},
+  s3:{name:'Police Missing Cell Liaison',phone:'0302-8888803',tag:'Search team',icon:'search'},
+  h1:{name:'Ahmed family — 2 rooms, Bahria Town, Rawalpindi',phone:'0300-9999901',tag:'Host home',icon:'key'},
+  h2:{name:'Malik house — 1 floor free, Satellite Town, Multan',phone:'0301-9999902',tag:'Host home',icon:'key'},
+  h3:{name:'Bano bakery upstairs, Ghari Mitu, Rawalpindi',phone:'0302-9999903',tag:'Host home',icon:'key'},
+  h4:{name:'Jadoon welfare society community house, Rajanpur',phone:'0303-9999904',tag:'Host home',icon:'key'}
+};
+
+const SENT_LABELS   = { sent:'Request Sent', approved:'Approved', on_the_way:'On The Way', delivered:'Delivered' };
+const STAY_LABELS   = { sent:'Request Filed', approved:'Family Verified', on_the_way:'Host Home Found', delivered:'Shifted / Housed' };
+const URGENCY       = { normal:'Normal', urgent:'Urgent', critical:'Critical' };
+
+/* One entry per request list — key, labels and how to describe a record */
+const SERVICES = [
+  { svc:'food', tab:'food', page:'food.html', key:'relieflink_food_requests', icon:'drop', label:'Food & Water',
+    labels: SENT_LABELS,
+    pick:  r => true,
+    title: r => r.type==='food' ? 'Food' : 'Water',
+    chips: r => [ {t:r.type==='food'?'Food':'Water', icon:r.type==='food'?'bag':'drop'},
+                  {t:(r.quantity||1)+' unit(s)'}, {t:(r.people||1)+' people'} ],
+    meta:  r => r.address,
+    agentField:'riderId', confirmable:true },
+
+  { svc:'clothes', tab:'clothes', page:'clothes.html', key:'relieflink_clothes_requests', icon:'bag', label:'Clothing & Supplies',
+    labels: SENT_LABELS,
+    pick:  r => true,
+    title: r => r.catLabel || 'Clothing',
+    chips: r => [ {t:r.catLabel}, {t:r.size}, {t:r.items}, {t:(r.quantity||1)+' piece(s)'} ],
+    meta:  r => r.address,
+    agentField:'riderId', confirmable:true },
+
+  { svc:'home', tab:'home', page:'home.html', key:'relieflink_home_requests', icon:'home', label:'Home Supplies',
+    labels: SENT_LABELS,
+    pick:  r => r.mode!=='stay',
+    title: r => r.catLabel || 'Home Supplies',
+    chips: r => [ {t:r.catLabel},
+                  {t:r.destLabel==='Shelter'?'Shelter delivery':'Home delivery', icon:r.destLabel==='Shelter'?'shield':'home'},
+                  {t:r.items}, {t:(r.quantity||1)+' item(s)'} ],
+    meta:  r => r.address,
+    agentField:'riderId', confirmable:true },
+
+  { svc:'stay', tab:'stay', page:'home.html', key:'relieflink_home_requests', icon:'stay', label:'Find a Home to Stay',
+    labels: STAY_LABELS,
+    pick:  r => r.mode==='stay',
+    title: r => (r.people||1) + ' people need a home',
+    chips: r => [ {t:r.duration, icon:'stay'}, {t:r.stayType},
+                  {t:(r.people||1)+' people'}, {t:URGENCY[r.urgency]||'Normal', warn:r.urgency!=='normal'} ],
+    meta:  r => [r.currentArea?('currently at '+r.currentArea):'', r.prefArea?('prefers '+r.prefArea):''].filter(Boolean).join(' · ') || 'No area given',
+    agentField:'hostId', confirmable:false },
+
+  { svc:'recovery', tab:'recovery', page:'recovery.html', key:'relieflink_recovery_requests', icon:'tools', label:'Home Recovery',
+    labels:{ sent:'Report Filed', approved:'Site Assessed', on_the_way:'Team On the Way', delivered:'Work Completed' },
+    pick:  r => true,
+    title: r => r.catLabel || 'Recovery',
+    chips: r => [ {t:r.catLabel}, {t:r.severity, warn:/major|collapsed|unsafe/i.test(String(r.severity||''))},
+                  {t:r.support}, {t:(r.rooms||0)+' room(s)'} ],
+    meta:  r => r.address,
+    agentField:'teamId', confirmable:false },
+
+  { svc:'missing', tab:'missing', page:'missing.html', key:'relieflink_missing_requests', icon:'search', label:'Missing Person',
+    labels:{ sent:'Report Filed', approved:'Under Review', on_the_way:'Search Team Active', delivered:'Found / Reunited' },
+    pick:  r => true,
+    title: r => r.pname || 'Missing person',
+    chips: r => [ {t:r.catLabel}, {t:(r.age||'?')+' yrs'}, {t:r.gender},
+                  r.priority==='critical' ? {t:'High priority', warn:true} : null ].filter(Boolean),
+    meta:  r => 'Last seen at '+r.seenPlace,
+    agentField:'teamId', confirmable:false }
+];
+
+const DELIVERED = 'delivered';
+let activeSvc   = 'all';
+let activeState = 'all';
+
+function loadKey(k){ try{ return JSON.parse(localStorage.getItem(k))||[]; }catch(e){ return []; } }
+function saveKey(k,list){ try{ localStorage.setItem(k,JSON.stringify(list)); }catch(e){} }
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmt(iso){ return new Date(iso).toLocaleString([],{dateStyle:'medium',timeStyle:'short'}); }
+function myId(){ return (function(){ try{
+  let i=localStorage.getItem('relieflink_user_id');
+  if(!i){ i='u'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); localStorage.setItem('relieflink_user_id',i); }
+  return i; }catch(e){ return 'me'; } })(); }
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
+}
+
+/* All my records across every service, newest first */
+function collect(){
+  let out = [];
+  SERVICES.forEach(s=>{
+    loadKey(s.key).filter(r=>r.userId===myId() && s.pick(r)).forEach(r=>{
+      out.push({ svc:s, rec:r });
+    });
+  });
+  return out.sort((a,b)=> String(b.rec.createdAt||'').localeCompare(String(a.rec.createdAt||'')));
+}
+
+function tracker(status, labels){
+  const idx = STEPS.indexOf(status);
+  return '<div class="tracker">'+STEPS.map((st,i)=>{
+    let c='t-step';
+    if(status===DELIVERED||i<idx) c+=' done';
+    else if(i===idx) c+=' current';
+    if(i===STEPS.length-1) c+=' final';
+    return `<div class="${c}"><div class="tdot">${c.includes('done')?'✓':i+1}</div>${esc(labels[st])}</div>`;
+  }).join('')+'</div>';
+}
+
+function setSvc(v, btn){
+  activeSvc = v;
+  document.querySelectorAll('#svcTabs .ftab').forEach(b=>b.classList.toggle('active',b===btn));
+  render();
+}
+function setState(v, btn){
+  activeState = v;
+  document.querySelectorAll('.filter-tabs:not(#svcTabs) .ftab').forEach(b=>b.classList.toggle('active',b===btn));
+  render();
+}
+
+document.getElementById('trackList').addEventListener('click', e=>{
+  const d = e.target.dataset;
+  if(!d.received) return;
+  const s = SERVICES.find(x=>x.svc===d.svc); if(!s) return;
+  const list = loadKey(s.key);
+  const hit  = list.find(r=>r.id===d.received); if(!hit) return;
+  hit.status = DELIVERED;
+  hit.updatedAt = new Date().toISOString();
+  saveKey(s.key, list);
+  toast('Marked as received. Shukriya!');
+  render();
+});
+
+window.addEventListener('storage', e=>{
+  if(SERVICES.some(s=>s.key===e.key)) render();
+});
+
+function render(){
+  const all = collect();
+
+  const open = all.filter(x=>x.rec.status!==DELIVERED).length;
+  const done = all.filter(x=>x.rec.status===DELIVERED).length;
+  document.getElementById('statsRow').innerHTML =
+    `<div class="stat-box"><b>${all.length}</b><span>Total requests</span></div>`+
+    `<div class="stat-box"><b>${open}</b><span>Still running</span></div>`+
+    `<div class="stat-box"><b>${done}</b><span>Completed</span></div>`;
+
+  let rows = all;
+  if(activeSvc!=='all')  rows = rows.filter(x=>x.svc.tab===activeSvc);
+  if(activeState==='open') rows = rows.filter(x=>x.rec.status!==DELIVERED);
+  else if(activeState===DELIVERED) rows = rows.filter(x=>x.rec.status===DELIVERED);
+
+  const el = document.getElementById('trackList');
+
+  if(!rows.length){
+    el.innerHTML = `<div class="empty-state">Nothing to track here yet.${all.length?' Try a different filter.':' Send a request first:'}
+      <div class="empty-links">
+        <a href="food.html"><i data-i="drop"></i> Food &amp; Water</a>
+        <a href="clothes.html"><i data-i="bag"></i> Clothing</a>
+        <a href="home.html"><i data-i="home"></i> Home Supplies</a>
+        <a href="home.html"><i data-i="stay"></i> Find a Home</a>
+        <a href="recovery.html"><i data-i="tools"></i> House Recovery</a>
+        <a href="missing.html"><i data-i="search"></i> Missing Person</a>
+      </div></div>`;
+    hydrateIcons();
+    return;
+  }
+
+  el.innerHTML = rows.map(({svc:s, rec:r})=>{
+    const ag = r[s.agentField] && AGENTS[r[s.agentField]];
+    const chips = s.chips(r).filter(Boolean).filter(c=>c.t)
+      .map(c=>`<span class="item-chip${c.warn?' urgent':''}">${c.icon?ico(c.icon):''}${esc(c.t)}</span>`).join('');
+    const agentHtml = ag&&(r.status==='on_the_way'||r.status===DELIVERED)
+      ?`<div class="agent-info">${ico(ag.icon||'users')}${esc(ag.tag)}: <strong>${esc(ag.name)}</strong>&nbsp;&nbsp;${ico('phone')}${esc(ag.phone)}</div>`:'';
+    const confirmHtml = (s.confirmable && r.status==='on_the_way')
+      ?`<button class="received-btn" data-received="${esc(r.id)}" data-svc="${s.svc}">${ico('check')} Mark as received</button>`:'';
+    const openHtml = r.status==='sent'
+      ?`<a class="link-btn" href="${s.page}">Open ${esc(s.label)} page</a>`:'';
+    return `<div class="req-card">
+      <div class="req-head">
+        <div>
+          <div class="req-svc">${ico(s.icon)} ${esc(s.label)}</div>
+          <span class="req-id">${esc(s.title(r))} · ${esc(r.id)}</span>
+        </div>
+        <span class="badge-status ${r.status}">${esc(s.labels[r.status]||r.status)}</span>
+      </div>
+      <div class="req-meta">${esc(s.meta(r))} · ${fmt(r.createdAt)}</div>
+      <div class="req-items">${chips}</div>
+      ${r.note?`<div class="req-meta" style="font-style:italic">${ico('note')}<span>${esc(r.note)}</span></div>`:''}
+      ${tracker(r.status, s.labels)}
+      ${agentHtml}
+      ${confirmHtml}
+      ${openHtml}
+    </div>`;
+  }).join('');
+}
+
+hydrateIcons();
+render();
+</script>
+</body>
+</html>

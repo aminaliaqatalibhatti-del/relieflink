@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Admin: Home &amp; Damage Recovery | ReliefLink</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>/* ── TOKENS ── */
+:root{--bg:#F5EEDB;--card:#FFFCF4;--g:#1B3A2A;--g2:#2F5A42;--g3:#0f2619;--gold:#C9A227;--gold2:#E8C86A;--ink:#1B3A2A;--mute:#8a866f;--line:#EADFC2;--sh:0 4px 24px rgba(27,58,42,.08);--p:#7C6CF0;--b:#4C8DF6;--gr:#3CC08E;--y:#F5B83D;--o:#F58A3D;--r:#EF5B5B;--rad:16px;--sidebar:250px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{background:var(--bg);scroll-behavior:smooth;}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:14px;color:var(--ink);background:var(--bg);min-height:100vh;}
+a{text-decoration:none;color:inherit;}button{font-family:inherit;cursor:pointer;}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;pointer-events:none;}
+.field-input{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px;font:inherit;font-size:14px;resize:vertical;outline:none;transition:.2s;background:var(--bg);color:var(--ink);}
+.field-input:focus{border-color:var(--gold);}
+.hide{display:none!important;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.fade-up{animation:fadeUp .5s ease both;}
+</style>
+<style>
+/* ── Page-specific ── */
+.page-wrap { max-width:820px; margin:0 auto; padding:28px 16px 80px; }
+.page-header { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
+.page-header .back-btn {
+  width:38px; height:38px; border-radius:50%; background:var(--card); border:1px solid var(--line);
+  display:grid; place-items:center; flex:none; cursor:pointer; color:var(--g);
+}
+.page-header .back-btn:hover { background:var(--gold); color:var(--g); }
+.page-title { font-size:22px; font-weight:800; color:var(--g); }
+.page-sub { font-size:13px; color:var(--mute); margin-bottom:22px; }
+
+/* stats row */
+.stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:22px; }
+.stat-box { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; text-align:center; }
+.stat-box b { display:block; font-size:1.6rem; font-weight:800; color:var(--g); }
+.stat-box span { font-size:11.5px; color:var(--mute); }
+
+/* filter tabs */
+.filter-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; }
+.ftab {
+  font:600 12.5px 'Plus Jakarta Sans',sans-serif; padding:6px 14px; border-radius:99px;
+  border:1.5px solid var(--line); background:var(--card); color:var(--mute); cursor:pointer;
+  transition:all .15s;
+}
+.ftab:hover, .ftab.active { background:var(--g); color:#F5EEDB; border-color:var(--g); }
+
+/* request card */
+.req-card { background:var(--card); border:1px solid var(--line); border-radius:var(--rad); padding:18px; margin-bottom:12px; }
+.req-card.major { border-color:#FCA5A5; background:#FFF7F5; }
+.req-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+.req-id   { font-size:13.5px; font-weight:800; color:var(--g); display:flex; align-items:center; gap:7px; }
+.req-id svg.i { width:17px; height:17px; color:var(--g2); }
+.req-meta { font-size:12.5px; color:var(--mute); margin-bottom:4px; }
+.req-addr { font-size:13px; color:var(--ink); font-weight:600; margin-bottom:8px; }
+.req-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.item-chip {
+  font-size:12px; font-weight:600; padding:3px 10px; border-radius:99px;
+  background:var(--bg); border:1px solid var(--line); color:var(--g);
+}
+.item-chip.warn { background:#FEE2E2; border-color:#FCA5A5; color:#991B1B; }
+
+/* status badge */
+.badge-status {
+  font-size:11.5px; font-weight:700; padding:3px 11px; border-radius:99px;
+  background:var(--line); color:var(--g);
+}
+.badge-status.sent       { background:#EEF2FF; color:#4338CA; }
+.badge-status.approved   { background:#ECFDF5; color:#065F46; }
+.badge-status.on_the_way { background:#FEF3C7; color:#92400E; }
+.badge-status.delivered  { background:#D1FAE5; color:#065F46; }
+
+/* tracker */
+.tracker { display:grid; grid-template-columns:repeat(4,1fr); margin:14px 0 10px; }
+.t-step { text-align:center; position:relative; font-size:10.5px; color:var(--mute); }
+.t-step .tdot {
+  width:24px; height:24px; border-radius:50%; background:var(--line); color:#fff;
+  display:grid; place-items:center; margin:0 auto 5px; font-size:11px;
+  position:relative; z-index:1; font-weight:700;
+}
+.t-step::before { content:""; position:absolute; top:11px; left:-50%; width:100%; height:3px; background:var(--line); }
+.t-step:first-child::before { display:none; }
+.t-step.done .tdot { background:var(--g); }
+.t-step.done::before,.t-step.current::before { background:var(--g); }
+.t-step.current .tdot { background:var(--gold); box-shadow:0 0 0 4px #FFF0B3; }
+.t-step.done,.t-step.current { color:var(--g); font-weight:700; }
+.t-step.final.done .tdot { background:var(--gr); }
+
+/* action area */
+.action-area { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px; padding-top:12px; border-top:1px solid var(--line); }
+.action-area select {
+  font:inherit; font-size:13px; color:var(--ink); background:var(--bg);
+  padding:8px 12px; border:1px solid var(--line); border-radius:10px; flex:1; min-width:200px;
+}
+.action-area select:focus { outline:none; border-color:var(--gold); }
+.act-btn {
+  font:700 13px 'Plus Jakarta Sans',sans-serif; padding:9px 18px; border:none;
+  border-radius:10px; cursor:pointer; transition:background .15s;
+}
+.act-btn.approve  { background:var(--g);  color:#F5EEDB; }
+.act-btn.approve:hover  { background:var(--g2); }
+.act-btn.assign   { background:var(--gold); color:var(--g); }
+.act-btn.assign:hover   { background:#B8910F; }
+.act-btn.deliver  { background:var(--gr); color:#fff; }
+.act-btn.deliver:hover  { background:#2aab78; }
+
+/* note */
+.req-note { font-size:12.5px; color:var(--mute); background:var(--bg); border-radius:8px; padding:7px 10px; margin-bottom:8px;
+            display:flex; align-items:flex-start; gap:7px; }
+.req-note svg.i { width:14px; height:14px; color:var(--g2); flex:none; margin-top:1px; }
+
+/* assigned team shown in the action area */
+.who { display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--mute); }
+.who svg.i { width:15px; height:15px; color:var(--g2); }
+.who strong { color:var(--g); }
+
+/* empty */
+.empty-state { text-align:center; color:var(--mute); padding:30px 16px; border:1px dashed var(--line); border-radius:var(--rad); font-size:13.5px; }
+
+/* toast */
+.rl-toast {
+  position:fixed; bottom:calc(20px + env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%);
+  background:var(--g); color:#F5EEDB; padding:10px 20px; border-radius:10px;
+  font-size:13.5px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .22s;
+  white-space:nowrap; z-index:999;
+}
+.rl-toast.show { opacity:1; }
+
+@media(max-width:560px){
+  .stats-row { grid-template-columns:repeat(2,1fr); }
+  .tracker { font-size:9.5px; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="page-header">
+    <button class="back-btn" onclick="history.back()" title="Go back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <h1 class="page-title">Home &amp; Damage Recovery — Admin</h1>
+  </div>
+  <p class="page-sub">Assess damage reports and assign recovery teams.</p>
+
+  <!-- Stats -->
+  <div class="stats-row" id="statsRow"></div>
+
+  <!-- Filter tabs -->
+  <div class="filter-tabs">
+    <button class="ftab active" data-filter="all"        onclick="setFilter('all',this)">All</button>
+    <button class="ftab"        data-filter="sent"       onclick="setFilter('sent',this)">New reports</button>
+    <button class="ftab"        data-filter="approved"   onclick="setFilter('approved',this)">Assessed</button>
+    <button class="ftab"        data-filter="on_the_way" onclick="setFilter('on_the_way',this)">Team assigned</button>
+    <button class="ftab"        data-filter="delivered"  onclick="setFilter('delivered',this)">Completed</button>
+  </div>
+
+  <!-- List -->
+  <div id="adminList"></div>
+
+</div>
+
+<div class="rl-toast" id="toast"></div>
+
+<script>
+const KEY    = 'relieflink_recovery_requests';
+const STEPS  = ['sent','approved','on_the_way','delivered'];
+const LABELS = { sent:'Report Filed', approved:'Site Assessed', on_the_way:'Team On the Way', delivered:'Work Completed' };
+const ACTIONS = { sent:'✓ Mark assessed', approved:'Assign team', on_the_way:'✓ Mark work completed' };
+const TEAMS = [
+  {id:'t1',name:'Recovery Team 1 — Jadoon',    phone:'0300-7777701'},
+  {id:'t2',name:'Recovery Team 2 — Al-Khidmat',phone:'0301-7777702'},
+  {id:'t3',name:'PDMA Repair Crew 3',          phone:'0302-7777703'}
+];
+
+/* Simple line icons — same style as the dashboard icon set */
+const IP = {
+  drop:   'M12 2.7s6 6.3 6 11.3a6 6 0 0 1-12 0c0-5 6-11.3 6-11.3z',
+  roof:   'M3 11l9-8 9 8 M5 10v10h14V10 M12 3v4',
+  brick:  'M3 6h18v12H3z M3 10h18 M3 14h18 M9 6v4 M15 10v4 M9 14v4',
+  bolt:   'M13 2 4 14h7l-1 8 9-12h-7z',
+  tools:  'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3-3a6 6 0 0 1-7 7l-1.4 1.4a1 1 0 0 1-1.4 0L7 10.4a1 1 0 0 1 0-1.4L8.4 7.6a6 6 0 0 1 7-7z',
+  users:  'M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2 M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M21 21v-2a4 4 0 0 0-3-3.9 M16 3.1a4 4 0 0 1 0 7.8',
+  phone:  'M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .8 2.9a2 2 0 0 1-.5 2.1L8.1 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.4 1.9.7 2.9.8a2 2 0 0 1 1.6 1.9z',
+  note:   'M12 20h9 M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z',
+  check:  'M20 6 9 17l-5-5'
+};
+function ico(n){ return IP[n] ? '<svg class="i" viewBox="0 0 24 24"><path d="'+IP[n]+'"/></svg>' : ''; }
+
+let activeFilter = 'all';
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||[]; }catch(e){ return []; } }
+function save(list){ try{ localStorage.setItem(KEY,JSON.stringify(list)); }catch(e){} }
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmt(iso){ return new Date(iso).toLocaleString([],{dateStyle:'medium',timeStyle:'short'}); }
+function team(id){ return TEAMS.find(t=>t.id===id); }
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+function update(id, patch){
+  save(load().map(r=> r.id===id ? {...r,...patch,updatedAt:new Date().toISOString()} : r));
+  render();
+}
+
+function setFilter(f, btn){
+  activeFilter = f;
+  document.querySelectorAll('.ftab').forEach(b=>b.classList.toggle('active',b===btn));
+  render();
+}
+
+function tracker(status){
+  const idx = STEPS.indexOf(status);
+  return '<div class="tracker">'+STEPS.map((s,i)=>{
+    let c='t-step';
+    if(status==='delivered'||i<idx) c+=' done';
+    else if(i===idx) c+=' current';
+    if(i===STEPS.length-1) c+=' final';
+    return `<div class="${c}"><div class="tdot">${c.includes('done')?'✓':i+1}</div>${LABELS[s]}</div>`;
+  }).join('')+'</div>';
+}
+
+document.getElementById('adminList').addEventListener('click', e=>{
+  const t = e.target.dataset;
+  if(t.approve){ update(t.approve,{status:'approved'}); toast('Site marked assessed ✓'); }
+  else if(t.assign){
+    const sel = document.querySelector(`[data-team-for="${t.assign}"]`);
+    if(!sel||!sel.value){ toast('Please select a recovery team first'); return; }
+    update(t.assign,{teamId:sel.value,status:'on_the_way'}); toast('Recovery team assigned');
+  }
+  else if(t.deliver){ update(t.deliver,{status:'delivered'}); toast('Work marked completed ✓'); }
+});
+
+window.addEventListener('storage', e=>{ if(e.key===KEY) render(); });
+
+function isMajor(r){ return /Major|destroyed/.test(String(r.severity||'')); }
+
+function render(){
+  const all = load();
+
+  const cnt = s => all.filter(r=>r.status===s).length;
+  document.getElementById('statsRow').innerHTML = STEPS.map(s=>
+    `<div class="stat-box"><b>${cnt(s)}</b><span>${LABELS[s]}</span></div>`
+  ).join('');
+
+  const list = activeFilter==='all' ? all : all.filter(r=>r.status===activeFilter);
+  const el   = document.getElementById('adminList');
+
+  if(!list.length){
+    el.innerHTML = '<div class="empty-state">No recovery requests in this stage yet.</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(r=>{
+    const tm   = r.teamId && team(r.teamId);
+    const chips = [r.catLabel,r.severity,r.rooms+' room(s)',r.occupied==='No — house is empty'?'':r.occupied]
+      .filter(Boolean)
+      .map(x=>`<span class="item-chip${isMajor(r)&&x===r.severity?' warn':''}">${esc(x)}</span>`).join('');
+    let action = '';
+
+    if(r.status==='sent'){
+      action = `<div class="action-area">
+        <button class="act-btn approve" data-approve="${r.id}">${ACTIONS.sent}</button>
+      </div>`;
+    } else if(r.status==='approved'){
+      action = `<div class="action-area">
+        <select data-team-for="${r.id}">
+          <option value="">— Select recovery team —</option>
+          ${TEAMS.map(v=>`<option value="${v.id}">${esc(v.name)} (${esc(v.phone)})</option>`).join('')}
+        </select>
+        <button class="act-btn assign" data-assign="${r.id}">${ACTIONS.approved}</button>
+      </div>`;
+    } else if(r.status==='on_the_way'){
+      action = `<div class="action-area">
+        <span class="who">${ico('users')} <strong>${esc(tm?.name||'—')}</strong> ${ico('phone')} (${esc(tm?.phone||'')})</span>
+        <button class="act-btn deliver" data-deliver="${r.id}">${ACTIONS.on_the_way}</button>
+      </div>`;
+    } else {
+      action = `<div class="action-area"><span style="font-size:12.5px;color:var(--mute)">Completed by ${esc(tm?.name||'—')}</span></div>`;
+    }
+
+    return `<div class="req-card${isMajor(r)?' major':''}">
+      <div class="req-head">
+        <span class="req-id">${ico(r.icon||'tools')} ${esc(r.catLabel||'Recovery')} · ${esc(r.id)}</span>
+        <span class="badge-status ${r.status}">${LABELS[r.status]}</span>
+      </div>
+      <div class="req-addr">${esc(r.name)} · ${esc(r.phone)}</div>
+      <div class="req-meta">${esc(r.address)}${r.landmark?' — landmark: '+esc(r.landmark):''}</div>
+      <div class="req-meta">Need: <strong>${esc(r.support||'—')}</strong> · ${esc(r.people||0)} people in house · ${fmt(r.createdAt)}</div>
+      <div class="req-chips">${chips}</div>
+      ${r.note ? `<div class="req-note">${ico('note')}<span>${esc(r.note)}</span></div>` : ''}
+      ${tracker(r.status)}
+      ${action}
+    </div>`;
+  }).join('');
+}
+
+render();
+</script>
+</body>
+</html>
