@@ -181,6 +181,7 @@
 .cp-msg.me { background: var(--g); color: #F5EEDB; align-self: flex-end; border-bottom-right-radius: 4px; }
 .cp-guide { background: rgba(245,184,61,.12); border: 1px solid rgba(245,184,61,.4); border-radius: 10px; padding: 8px 12px; font-size: 12px; margin: 4px 0; }
 .cp-draft { border: 1.5px solid var(--gold); border-radius: 14px; padding: 12px 14px; margin-top: 12px; background: rgba(201,137,58,.07); }
+.cp-eng { font-size: 10px; letter-spacing: .5px; text-transform: uppercase; opacity: .5; margin-top: 6px; }
 .mic-on { animation: micPulse 1s infinite; }
 @keyframes micPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,91,91,.5); } 50% { box-shadow: 0 0 0 8px rgba(239,91,91,0); } }
 
@@ -1563,13 +1564,17 @@ function cpBubble(cls, html) {
   box.appendChild(d); box.scrollTop = box.scrollHeight;
   return d;
 }
+var CP_HIST = [];
 function cpSend() {
   var inp = RL_$('cpInput'); var v = inp ? inp.value.trim() : '';
   if (!v) return;
   cpBubble('me', esc(v)); inp.value = '';
   var wait = cpBubble('ai', '<span class="mute">Thinking…</span>');
-  RL_Send('POST', '/ai/copilot', { message: v }).then(function(res) {
+  var past = CP_HIST.slice(-6);            /* earlier turns only — the model needs them to avoid repeating itself */
+  CP_HIST.push({ role: 'user', text: v });
+  RL_Send('POST', '/ai/copilot', { message: v, history: past }).then(function(res) {
     if (!res || !res.ok || !res.data) { wait.innerHTML = 'Server unreachable. In an emergency, dial <b>1122</b>.'; return; }
+    CP_HIST.push({ role: 'model', text: String(res.data.reply || '').slice(0, 300) });
     cpRender(res.data, wait);
   });
 }
@@ -1584,6 +1589,7 @@ function cpRender(d, el) {
     html += '<div class="cp-guide"><b>Immediate safety:</b><br>• ' + d.guidance.map(esc).join('<br>• ') + '</div>';
   }
   if (d.question) html += '\n<b>' + esc(d.question) + '</b>';
+  html += '<div class="cp-eng">' + (d.engine === 'gemini' ? 'Gemini AI' : 'offline helper') + '</div>';
   el.innerHTML = html;
   var dr = RL_$('cpDraft');
   if (dr && d.draft) {

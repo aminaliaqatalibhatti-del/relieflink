@@ -572,32 +572,77 @@ function nextQuestion(i) {
   return 'Enter your area or nearest landmark so the team reaches the right place.';
 }
 
-// Copilot: Groq LLM if GROQ_API_KEY env is set, otherwise the deterministic rule engine.
+/* Copilot LLM: Gemini (Google AI Studio). The key is read from the Vercel project
+   env var GEMINI_API_KEY — never commit it, this repository is public.
+   gemini-2.0-flash / gemini-2.5-flash are retired for newer keys, and the current
+   aliases answer 503 when Google is busy, so models are tried in order. */
+const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-flash-lite-latest'];
+const CP_SYSTEM = 'You are ReliefLink PK disaster copilot. The citizen is writing from a disaster zone in Pakistan, in English, Urdu or Roman Urdu. Reply ONLY JSON: {"incident_type":"flood|earthquake|fire|storm|landslide|medical|missing|other","needs":["rescue","evacuation","medical","shelter","food_water","transport","search","assessment"],"people_count":number,"urgency":"critical|high|medium|low","flags":["trapped","injured","children","elderly","pregnant"],"reply":"one short caring sentence in the SAME language as the user"}. Vary the wording of reply naturally each time, acknowledge what they just said, never repeat yourself, never invent facts and never claim help has been dispatched.';
+const CP_NEEDS = ['rescue', 'evacuation', 'medical', 'shelter', 'food_water', 'transport', 'search', 'assessment'];
+const CP_TYPES = ['flood', 'earthquake', 'fire', 'storm', 'landslide', 'medical', 'missing', 'other'];
+const CP_URGENCY = ['critical', 'high', 'medium', 'low'];
+const CP_FLAGS = ['trapped', 'injured', 'children', 'elderly', 'pregnant'];
+
+function parseJsonLoose(text) {
+  const s = String(text || '').replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+  if (!s) return null;
+  try { return JSON.parse(s); } catch (e) { /* fall through */ }
+  const a = s.indexOf('{'), b = s.lastIndexOf('}');
+  if (a >= 0 && b > a) { try { return JSON.parse(s.slice(a, b + 1)); } catch (e) { return null; } }
+  return null;
+}
+
+// Returns the parsed model answer, or null so the caller can use the rule engine.
+async function geminiReply(message, history) {
+  const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!key || !message) return null;
+  const contents = [];
+  (Array.isArray(history) ? history : []).slice(-6).forEach(function (h) {
+    const text = String((h && h.text) || '').slice(0, 800);
+    if (text) contents.push({ role: h.role === 'model' ? 'model' : 'user', parts: [{ text: text }] });
+  });
+  contents.push({ role: 'user', parts: [{ text: message }] });
+  const models = (process.env.GEMINI_MODEL ? [String(process.env.GEMINI_MODEL)] : []).concat(GEMINI_MODELS);
+  for (const model of models) {
+    try {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: CP_SYSTEM }] },
+          contents: contents,
+          // thinking models spend this budget on hidden tokens too — 400 truncated the JSON
+          generationConfig: { temperature: 0.9, topP: 0.95, maxOutputTokens: 2048, responseMimeType: 'application/json' }
+        }),
+        signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(12000) : undefined
+      });
+      if (!r.ok) continue;
+      const j = await r.json();
+      const parts = (((j.candidates || [])[0] || {}).content || {}).parts || [];
+      const parsed = parseJsonLoose(parts.map(function (p) { return p.text || ''; }).join(''));
+      if (parsed && parsed.reply) { parsed._model = model; return parsed; }
+    } catch (e) { /* busy, retired or timed out — try the next alias */ }
+  }
+  return null;
+}
+
+// Copilot: Gemini LLM if GEMINI_API_KEY env is set, otherwise the deterministic rule engine.
 async function copilot(res, b) {
   const message = String(b.message || '').slice(0, 800);
   const rule = extractIntent(message);
   const tri = triageScore(rule.urgency, rule.people_count, rule.flags);
-  if (process.env.GROQ_API_KEY && message) {
-    try {
-      const gr = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { Authorization: 'Bearer ' + process.env.GROQ_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile', temperature: 0.3, response_format: { type: 'json_object' },
-          messages: [
-            { role: 'system', content: 'You are ReliefLink PK disaster copilot. From the citizen message (English/Urdu/Roman Urdu), reply ONLY JSON: {"incident_type":"flood|earthquake|fire|storm|landslide|medical|missing|other","needs":["rescue","evacuation","medical","shelter","food_water","transport","search","assessment"],"people_count":number,"urgency":"critical|high|medium|low","flags":["trapped","injured","children","elderly","pregnant"],"reply":"one short caring sentence in the SAME language as the user"}. Never invent facts.' },
-            { role: 'user', content: message }
-          ]
-        })
-      });
-      if (gr.ok) {
-        const gj = await gr.json();
-        const j = JSON.parse(gj.choices[0].message.content);
-        const i2 = { incident_type: j.incident_type || rule.incident_type, needs: (j.needs || rule.needs).slice(0, 4), people_count: +j.people_count || rule.people_count, urgency: j.urgency || rule.urgency, flags: (j.flags || rule.flags).slice(0, 5) };
-        const t2 = triageScore(i2.urgency, i2.people_count, i2.flags);
-        return ok(res, { engine: 'groq', intent: i2, triage: t2, guidance: GUIDANCE[i2.incident_type] || GUIDANCE.other, question: nextQuestion(i2), reply: j.reply || '', draft: { incident_type: i2.incident_type, needs: i2.needs, people_count: i2.people_count, urgency: i2.urgency, description: message } }, 'Copilot reply');
-      }
-    } catch (e) { /* fall through to rule engine */ }
+  const g = await geminiReply(message, b.history);
+  if (g) {
+    const i2 = {
+      incident_type: CP_TYPES.indexOf(g.incident_type) >= 0 ? g.incident_type : rule.incident_type,
+      needs: (Array.isArray(g.needs) ? g.needs : rule.needs).filter(function (n) { return CP_NEEDS.indexOf(n) >= 0; }).slice(0, 4),
+      people_count: Math.min(99, +g.people_count || rule.people_count),
+      urgency: CP_URGENCY.indexOf(g.urgency) >= 0 ? g.urgency : rule.urgency,
+      flags: (Array.isArray(g.flags) ? g.flags : rule.flags).filter(function (f) { return CP_FLAGS.indexOf(f) >= 0; }).slice(0, 5)
+    };
+    if (!i2.needs.length) i2.needs = rule.needs;
+    const t2 = triageScore(i2.urgency, i2.people_count, i2.flags);
+    return ok(res, { engine: 'gemini', model: g._model, intent: i2, triage: t2, guidance: GUIDANCE[i2.incident_type] || GUIDANCE.other, question: nextQuestion(i2), reply: String(g.reply).slice(0, 300), draft: { incident_type: i2.incident_type, needs: i2.needs, people_count: i2.people_count, urgency: i2.urgency, description: message } }, 'Copilot reply');
   }
   const reply = 'I understood your situation: ' + rule.incident_type.toUpperCase() +
     (rule.flags.length ? ' (' + rule.flags.join(', ') + ')' : '') + '. Don\'t wait for emergency services — call Rescue 1122.';
