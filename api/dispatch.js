@@ -578,7 +578,7 @@ function nextQuestion(i) {
    gemini-2.0-flash / gemini-2.5-flash are retired for newer keys and the live aliases
    answer 503 when Google is busy, so each provider falls through to the next. */
 const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-flash-lite-latest'];
-const LLM_MODELS = ['openai-fast', 'openai', 'mistral'];   // free tier = 1 reply / 30 s per IP, so keep the list short and quick
+const LLM_MODELS = ['openai-fast', 'openai'];   // free tier = 1 reply / 30 s per IP, so keep the list short and quick
 const CP_SYSTEM = 'You are ReliefLink PK disaster copilot. The citizen is writing from a disaster zone in Pakistan, in English, Urdu or Roman Urdu. Reply ONLY JSON, no prose around it: {"incident_type":"flood|earthquake|fire|storm|landslide|medical|missing|other","needs":["rescue","evacuation","medical","shelter","food_water","transport","search","assessment"],"people_count":number,"urgency":"critical|high|medium|low","flags":["trapped","injured","children","elderly","pregnant"],"reply":"one short caring sentence"}. Write reply in the SAME script the user used: Roman Urdu in Latin letters for Roman Urdu (e.g. "Allah aap ko hifazat mein rakhe"), Urdu script for Urdu, English for English — never Devanagari. Vary the wording each time, answer what they just said, never repeat yourself, never invent facts, never claim help has been dispatched.';
 const CP_NEEDS = ['rescue', 'evacuation', 'medical', 'shelter', 'food_water', 'transport', 'search', 'assessment'];
 const CP_TYPES = ['flood', 'earthquake', 'fire', 'storm', 'landslide', 'medical', 'missing', 'other'];
@@ -658,7 +658,7 @@ async function openAiReply(url, headers, models, message, history, tag, errs) {
         method: 'POST',
         headers: Object.assign({ 'Content-Type': 'application/json' }, headers || {}),
         body: JSON.stringify({ model: model, messages: msgs, temperature: 0.9, seed: Math.floor(Math.random() * 1e9) }),
-        signal: timeoutSignal(11000)
+        signal: timeoutSignal(13000)
       });
       if (!r.ok) { if (errs) errs.push(tag + ':' + model + ' HTTP ' + r.status + ' ' + String(await r.text()).slice(0, 120)); continue; }
       const j = await r.json();
@@ -733,8 +733,13 @@ async function createMeshMessage(res, b) {
     created_at: nowIso()
   };
   if (lat != null && lon != null) { row.latitude = lat; row.longitude = lon; }
-  const created = await sb('mesh_messages', { method: 'POST', body: row, prefer: 'return=representation' });
-  ok(res, created && created[0] ? created[0] : row, 'Posted');
+  // The relay table is optional (db/migrations/004_mesh.sql) — never 500 a citizen's message over it.
+  try {
+    const created = await sb('mesh_messages', { method: 'POST', body: row, prefer: 'return=representation' });
+    return ok(res, created && created[0] ? created[0] : row, 'Posted');
+  } catch (e) {
+    ok(res, Object.assign({ queued: true }, row), 'Mesh relay storage is not configured — message kept on this device');
+  }
 }
 
 async function listMeshZone(res, q) {
@@ -742,7 +747,13 @@ async function listMeshZone(res, q) {
   // recent window: since=<iso> returns only newer rows (polling); otherwise last 50.
   const query = { select: '*', zone: 'eq.' + zone, order: 'created_at.desc', limit: 50 };
   if (q.since) query.created_at = 'gt.' + encodeURIComponent(String(q.since));
-  const messages = (await sb('mesh_messages', { query })) || [];
+  let messages = [];
+  try {
+    messages = (await sb('mesh_messages', { query })) || [];
+  } catch (e) {
+    // 004_mesh.sql not applied yet — an empty zone is a working answer, not a server error.
+    return ok(res, { zone, messages: [], peers: [], relay: 'unavailable' }, 'Mesh relay not configured');
+  }
   // Peer presence for the 1 km radar: latest located message per sender.
   const peers = {};
   messages.forEach(function (m) {
