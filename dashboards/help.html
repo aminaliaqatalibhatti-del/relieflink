@@ -1949,7 +1949,26 @@ var u = RL_BootUser({ defaultName: 'User', defaultRole: 'help' });
 if (u && u.name)  { var rn=RL_$('reqName');  if(rn) rn.value = u.name; }
 if (u && u.phone) { var rp=RL_$('reqPhone'); if(rp) rp.value = u.phone; }
 if (u && u.area)  { var rl=RL_$('reqLoc');   if(rl) rl.value = u.area; }
-try { var saved = JSON.parse(localStorage.getItem('rl_help')||'[]'); if (Array.isArray(saved)) myReqs = saved; } catch(e) {}
+/* My Requests is private: keep rows this device filed itself, plus rows that carry
+   this citizen's id / phone. Older builds pulled the whole table into this cache, so
+   anything that is both on the server and not ours is dropped (and the cache is fixed). */
+try {
+  var saved = JSON.parse(localStorage.getItem('rl_help') || '[]');
+  if (Array.isArray(saved)) {
+    var _au = (window.RL_Auth && window.RL_Auth.user()) || {};
+    var _lu = {}; try { _lu = JSON.parse(localStorage.getItem('rl_user') || '{}') || {}; } catch (e) {}
+    var ids = {}, phones = {};
+    [_au.id, _lu.id].forEach(function (x) { x = String(x || ''); if (x) ids[x] = 1; });
+    [_au.phone, _lu.phone].forEach(function (x) { x = String(x || '').replace(/\D/g, ''); if (x.length >= 10) phones[x] = 1; });
+    myReqs = saved.filter(function (r) {
+      if (!r || r.uid) return !!r;
+      if (!r._live || !r.id) return true;
+      var p = String(r.phone || '').replace(/\D/g, '');
+      return (p.length >= 10 && !!phones[p]) || (!!r.userId && !!ids[String(r.userId)]);
+    });
+    if (myReqs.length !== saved.length) { try { localStorage.setItem('rl_help', JSON.stringify(myReqs)); } catch (e) {} }
+  }
+} catch(e) {}
 updateBadges();
 renderNotifs(false);
 RL_Icons();

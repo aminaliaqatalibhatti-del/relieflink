@@ -109,9 +109,14 @@
   }
   function push(rec, cfg) {
     if (!rec.srvId) return create(rec, cfg);
-    var body = { status: TO_SERVER[rec.status] || 'pending', description: pack(rec, cfg), phone: rec.phone || rec.rphone || '' };
+    var body = {
+      status: TO_SERVER[rec.status] || 'pending',
+      description: pack(rec, cfg),
+      phone: rec.phone || rec.rphone || '',
+      device: rec.userId || ''            // proves ownership for the standalone pages (no login needed)
+    };
     return call('PATCH', API + '/help-requests/' + encodeURIComponent(rec.srvId), body).then(function (r) {
-      if (r && r.ok) SNAP[rec.id] = rec.updatedAt || rec.createdAt;
+      if (r && r.ok) SNAP[rec.id] = rec.updatedAt || rec.createdAt;   // local record already holds exactly what we sent
       return !!(r && r.ok);
     });
   }
@@ -177,23 +182,31 @@
     bar.innerHTML = '<span>Sign in as the response team to update these requests</span>'
       + '<input id="rlLiveEmail" type="email" placeholder="admin email" style="padding:8px;border-radius:8px;border:0;font:inherit">'
       + '<input id="rlLivePw" type="password" placeholder="password" style="padding:8px;border-radius:8px;border:0;font:inherit">'
-      + '<button id="rlLiveGo" style="padding:8px 14px;border:0;border-radius:8px;background:#C9A227;color:#12251C;font:inherit;cursor:pointer">Sign in</button>';
+      + '<button id="rlLiveGo" style="padding:8px 14px;border:0;border-radius:8px;background:#C9A227;color:#12251C;font:inherit;cursor:pointer">Sign in</button>'
+      + '<span id="rlLiveMsg" role="alert" style="color:#FFB4B4;font-weight:700;max-width:46%"></span>';
     bar.appendChild(document.createTextNode(''));
     document.body.appendChild(bar);
     document.getElementById('rlLiveGo').onclick = function () {
       var email = document.getElementById('rlLiveEmail').value.trim();
       var password = document.getElementById('rlLivePw').value;
-      if (!email || !password) return;
-      this.textContent = 'Signing in…';
+      var msg = document.getElementById('rlLiveMsg');
+      var btn = this;
+      if (!email || !password) { msg.textContent = 'Enter the admin email and password.'; return; }
+      msg.textContent = '';
+      btn.textContent = 'Signing in…';
       call('POST', API + '/auth/admin-signin', { email: email, password: password }).then(function (r) {
         if (r && r.ok && r.data && r.data.token) {
           try { localStorage.setItem('rl_session', JSON.stringify(r.data)); } catch (e) {}
           bar.remove();
           syncInto(cfg).then(function () { if (cfg.onChanged) cfg.onChanged(); });
-        } else {
-          this.textContent = 'Try again';
-          this.style.background = '#EF5B5B';
+          return;
         }
+        btn.textContent = 'Sign in';
+        btn.style.background = '#EF5B5B';
+        msg.textContent = (r && r.status === 0)
+          ? 'No connection — sign in again when you are back online.'
+          : (r && r.message) || 'Sign in failed (' + (r && r.status) + ')';
+        setTimeout(function () { btn.style.background = '#C9A227'; }, 2600);
       }.bind(this));
     };
   }

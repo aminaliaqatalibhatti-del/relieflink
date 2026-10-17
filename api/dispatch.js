@@ -135,12 +135,14 @@ async function updateHelpRequest(res, req, id, b) {
   if (!cur) return fail(res, 'Request not found', 404);
   const admin = !!(t && t.role === 'admin');
   // A citizen may only close their own request ("I am safe / no longer need help").
-  // Ownership is the account id, or — for guests and for the standalone service pages,
-  // which file requests under a device id — the phone number they were given.
+  // Ownership is the account id, the phone number they were given, or the device id
+  // the standalone service pages file their requests under (help_requests.user_id).
   const owns = !!t && String(cur.user_id) === String(t.uid);
+  const dev = String(b.device || '').slice(0, 60);
+  const ownsDevice = !!dev && !!cur.user_id && String(cur.user_id) === dev;
   const samePhone = !!(b.phone && cur.phone) && normPKPhone(b.phone) != null && normPKPhone(b.phone) === normPKPhone(cur.phone);
   if (!admin) {
-    if (!owns && !samePhone) return fail(res, 'You can only update your own request', 403);
+    if (!owns && !ownsDevice && !samePhone) return fail(res, 'You can only update your own request', 403);
     if (status !== 'resolved') return fail(res, 'Only the response team can move this request forward', 403);
   }
   const patch = { updated_at: nowIso() };
