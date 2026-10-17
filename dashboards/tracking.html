@@ -162,6 +162,8 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke
 </div>
 <div class="rl-toast" id="toast"></div>
 
+<script src="../config.js"></script>
+<script src="livesync.js"></script>
 <script>
 const STEPS = ['sent','approved','on_the_way','delivered'];
 
@@ -327,6 +329,7 @@ document.getElementById('trackList').addEventListener('click', e=>{
   hit.status = DELIVERED;
   hit.updatedAt = new Date().toISOString();
   saveKey(s.key, list);
+  RLive.send(hit, liveCfg(s.key));
   toast('Marked as received. Shukriya!');
   render();
 });
@@ -397,6 +400,29 @@ function render(){
 
 hydrateIcons();
 render();
+
+/* ── LIVE: every service list is mirrored on the relief server, so the team's progress shows here ── */
+const LIVE = [
+  { category:'food',     listKey:'relieflink_food_requests',
+    summary: r => (r.type==='food'?'Food':'Water')+' · '+(r.quantity||1)+' unit(s) for '+(r.people||1)+' people · '+(r.address||'') },
+  { category:'clothing', listKey:'relieflink_clothes_requests',
+    summary: r => (r.catLabel||'Clothing')+' · '+(r.items||'')+' · '+(r.quantity||1)+' unit(s) for '+(r.people||1)+' people · '+(r.address||'') },
+  { category:'shelter',  listKey:'relieflink_home_requests',
+    summary: r => r.mode==='stay'
+      ? ('Host home for '+(r.people||1)+' people · area '+(r.prefArea||r.currentArea||'any'))
+      : ((r.catLabel||'Home supplies')+' · '+(r.items||'')+' · '+(r.quantity||1)+' unit(s) for '+(r.people||1)+' people · '+(r.address||'')) },
+  { category:'recovery', listKey:'relieflink_recovery_requests',
+    summary: r => (r.catLabel||'Damage report')+' · '+(r.severity||'')+' · '+(r.rooms||0)+' rooms · '+(r.address||'') },
+  { category:'missing',  listKey:'relieflink_missing_requests',
+    summary: r => 'Missing '+(r.pname||'person')+', '+(r.age||'?')+' yrs · last seen '+(r.seenDate||'')+' at '+(r.seenPlace||'') }
+];
+function liveCfg(key){
+  for (var i = 0; i < LIVE.length; i++) if (LIVE[i].listKey === key) return Object.assign({ mine:true, uid: myId }, LIVE[i]);
+  return null;
+}
+function pullAll(){ return RLive.multi(LIVE.map(function (c) { return Object.assign({ mine:true, uid: myId }, c); })); }
+pullAll().then(function(){ render(); });
+setInterval(function(){ if (!document.hidden) pullAll().then(render); }, 25000);
 </script>
 </body>
 </html>

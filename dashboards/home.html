@@ -317,6 +317,8 @@ select.field-input { appearance:auto; }
 </div>
 <div class="rl-toast" id="toast"></div>
 
+<script src="../config.js"></script>
+<script src="livesync.js"></script>
 <script>
 const KEY    = 'relieflink_home_requests';
 const STEPS  = ['sent','approved','on_the_way','delivered'];
@@ -499,6 +501,7 @@ function submitReq(e){
 
   list.unshift(base);
   save(list);
+  RLive.after(list);
   e.target.reset();
   document.getElementById('reqForm').classList.remove('visible');
   currentType = null;
@@ -510,7 +513,9 @@ function submitReq(e){
 }
 
 function update(id,patch){
-  save(load().map(r=>r.id===id?{...r,...patch,updatedAt:new Date().toISOString()}:r));
+  const list = load().map(r=>r.id===id?{...r,...patch,updatedAt:new Date().toISOString()}:r);
+  save(list);
+  RLive.after(list);
   render();
 }
 
@@ -579,6 +584,16 @@ function render(){
 
 hydrateIcons();
 render();
+/* live: share the server so the response team sees the request, and their progress comes back */
+RLive.bind({
+  category:'shelter', listKey:KEY, mine:true, uid: myId,
+  summary: r => r.mode==='stay'
+    ? ('Host home for '+(r.people||1)+' people'+(r.companions?' ('+r.companions+')':'')+' · area '+(r.prefArea||r.currentArea||'any')+' · '+(r.duration||'')+' · '+(r.household||''))
+    : ((r.catLabel||'Home supplies')+' · '+(r.items||'')+' · '+(r.quantity||1)+' unit(s) for '+(r.people||1)+' people · to '+(r.destLabel||'Home')+': '+(r.address||'')),
+  onChanged: function(){ hydrateIcons(); render(); }
+});
+RLive.sync().then(function(){ render(); });
+RLive.watch();
 </script>
 </body>
 </html>

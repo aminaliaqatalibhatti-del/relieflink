@@ -183,6 +183,8 @@ textarea.field-input { resize:vertical; min-height:72px; }
 
 <div class="rl-toast" id="toast"></div>
 
+<script src="../config.js"></script>
+<script src="livesync.js"></script>
 <script>
 const KEY   = 'relieflink_food_requests';
 const STEPS = ['sent','approved','on_the_way','delivered'];
@@ -240,6 +242,7 @@ function submitReq(e){
     updatedAt: new Date().toISOString()
   });
   save(list);
+  RLive.after(list);
   e.target.reset();
   document.getElementById('reqForm').classList.remove('visible');
   currentType = null;
@@ -249,7 +252,9 @@ function submitReq(e){
 }
 
 function update(id, patch){
-  save(load().map(r=> r.id===id ? {...r,...patch,updatedAt:new Date().toISOString()} : r));
+  const list = load().map(r=> r.id===id ? {...r,...patch,updatedAt:new Date().toISOString()} : r);
+  save(list);
+  RLive.after(list);
   render();
 }
 
@@ -299,6 +304,15 @@ function render(){
 }
 
 render();
+/* live: mirror this device's requests to the relief server and pull the team's updates back */
+RLive.bind({
+  category:'food', listKey:KEY, mine:true,
+  uid: myId,
+  summary: r => (r.type==='food'?'Food':'Water')+' · '+(r.quantity||1)+' unit(s) for '+(r.people||1)+' people · '+(r.address||''),
+  onChanged: render
+});
+RLive.sync().then(render);
+RLive.watch();
 </script>
 </body>
 </html>

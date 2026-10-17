@@ -250,6 +250,8 @@ select.field-input { appearance:auto; }
 </div>
 <div class="rl-toast" id="toast"></div>
 
+<script src="../config.js"></script>
+<script src="livesync.js"></script>
 <script>
 const KEY    = 'relieflink_clothes_requests';
 const STEPS  = ['sent','approved','on_the_way','delivered'];
@@ -366,6 +368,7 @@ function submitReq(e){
     updatedAt: new Date().toISOString()
   });
   save(list);
+  RLive.after(list);
   e.target.reset();
   document.getElementById('reqForm').classList.remove('visible');
   currentType = null;
@@ -375,7 +378,9 @@ function submitReq(e){
 }
 
 function update(id,patch){
-  save(load().map(r=>r.id===id?{...r,...patch,updatedAt:new Date().toISOString()}:r));
+  const list = load().map(r=>r.id===id?{...r,...patch,updatedAt:new Date().toISOString()}:r);
+  save(list);
+  RLive.after(list);
   render();
 }
 
@@ -431,6 +436,14 @@ function render(){
 document.getElementById('ageGroupWrap').style.display='none';
 
 render();
+/* live: mirror to the relief server + pull the team's status back */
+RLive.bind({
+  category:'clothing', listKey:KEY, mine:true, uid: myId,
+  summary: r => (r.catLabel||'Clothing')+' · '+(r.items||'')+' · '+(r.quantity||1)+' unit(s) for '+(r.people||1)+' people · '+(r.address||''),
+  onChanged: render
+});
+RLive.sync().then(render);
+RLive.watch();
 </script>
 </body>
 </html>

@@ -656,7 +656,9 @@ function loadHelpRequests() {
   RL_Get('/help-requests?limit=100').then(function(a) {
     if (!Array.isArray(a) || !a.length) return;
     helpReqs = a.map(function(x) {
-      var desc = x.description || '';
+      // the service pages store their extra fields (rider, quantity…) as an encoded
+      // token inside the description — the queue only ever shows the human line
+      var desc = String(x.description || '').replace(/\u27e6rl:[\s\S]*?\u27e7/g, '').trim();
       var pm = /\((\d+) people\)/.exec(desc);
       var an = window.RL_AI ? RL_AI.analyze(desc || (x.category||'')) : null;
       if (an && x.urgency === 'critical' && an.triage.recommended !== 'critical') an.triage = { score: Math.max(an.triage.score, 78), recommended: 'critical' };

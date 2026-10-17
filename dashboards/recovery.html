@@ -235,6 +235,8 @@ select.field-input { appearance:auto; }
 </div>
 <div class="rl-toast" id="toast"></div>
 
+<script src="../config.js"></script>
+<script src="livesync.js"></script>
 <script>
 const KEY    = 'relieflink_recovery_requests';
 const STEPS  = ['sent','approved','on_the_way','delivered'];
@@ -347,6 +349,7 @@ function submitReq(e){
     updatedAt: new Date().toISOString()
   });
   save(list);
+  RLive.after(list);
   e.target.reset();
   document.getElementById('reqForm').classList.remove('visible');
   currentType = null;
@@ -356,7 +359,9 @@ function submitReq(e){
 }
 
 function update(id,patch){
-  save(load().map(r=>r.id===id?{...r,...patch,updatedAt:new Date().toISOString()}:r));
+  const list = load().map(r=>r.id===id?{...r,...patch,updatedAt:new Date().toISOString()}:r);
+  save(list);
+  RLive.after(list);
   render();
 }
 
@@ -404,6 +409,14 @@ function render(){
 
 hydrateIcons();
 render();
+/* live: the recovery desk sees the report on their own screen */
+RLive.bind({
+  category:'recovery', listKey:KEY, mine:true, uid: myId,
+  summary: r => (r.catLabel||'Damage report')+' · '+(r.severity||'')+' · '+(r.rooms||0)+' rooms · '+(r.people||1)+' people · '+(r.address||'')+(r.landmark?' near '+r.landmark:''),
+  onChanged: function(){ hydrateIcons(); render(); }
+});
+RLive.sync().then(function(){ render(); });
+RLive.watch();
 </script>
 </body>
 </html>

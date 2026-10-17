@@ -179,6 +179,8 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke
 
 <div class="rl-toast" id="toast"></div>
 
+<script src="../config.js"></script>
+<script src="livesync.js"></script>
 <script>
 const KEY    = 'relieflink_home_requests';
 const STEPS  = ['sent','approved','on_the_way','delivered'];
@@ -239,7 +241,9 @@ function toast(msg){
 }
 
 function update(id, patch){
-  save(load().map(r=> r.id===id ? {...r,...patch,updatedAt:new Date().toISOString()} : r));
+  const list = load().map(r=> r.id===id ? {...r,...patch,updatedAt:new Date().toISOString()} : r);
+  save(list);
+  RLive.after(list);
   render();
 }
 
@@ -379,6 +383,16 @@ function render(){
 
 hydrateIcons();
 render();
+/* live queue: citizen housing + supplies requests from every device */
+RLive.bind({
+  category:'shelter', listKey:KEY, admin:true,
+  summary: r => r.mode==='stay'
+    ? ('Host home for '+(r.people||1)+' people'+(r.companions?' ('+r.companions+')':'')+' · area '+(r.prefArea||r.currentArea||'any')+' · '+(r.duration||'')+' · '+(r.household||''))
+    : ((r.catLabel||'Home supplies')+' · '+(r.items||'')+' · '+(r.quantity||1)+' unit(s) for '+(r.people||1)+' people · to '+(r.destLabel||'Home')+': '+(r.address||'')),
+  onChanged: function(){ hydrateIcons(); render(); }
+});
+RLive.sync().then(function(){ render(); });
+RLive.watch();
 </script>
 </body>
 </html>

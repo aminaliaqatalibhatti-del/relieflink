@@ -101,8 +101,8 @@ async function createHelpRequest(res, b) {
   const p = normPKPhone(b.phone); // never reject an emergency request, just clean the number
   const row = {
     id: rid('RFL'), user_id: b.user_id || null, full_name: b.full_name || 'Citizen',
-    phone: b.phone || '', city: b.city || '', category: b.category || 'special',
-    description: b.description || '', urgency: b.urgent ? 'critical' : (b.urgency || 'high'),
+    phone: p || String(b.phone || '').slice(0, 20), city: b.city || '', category: b.category || 'special',
+    description: String(b.description || '').slice(0, 2000), urgency: b.urgent ? 'critical' : (b.urgency || 'high'),
     status: 'pending', latitude: b.latitude != null ? b.latitude : null,
     longitude: b.longitude != null ? b.longitude : null, created_at: nowIso(), updated_at: nowIso()
   };
@@ -113,29 +113,47 @@ async function createHelpRequest(res, b) {
 async function listHelpRequests(res, q) {
   const limit = Math.min(parseInt(q.limit, 10) || 100, 500);
   const query = { select: '*', order: 'created_at.desc', limit: String(limit) };
-  if (q.user_id) query.user_id = 'eq.' + q.user_id;
+  if (q.user_id) query.user_id = 'eq.' + String(q.user_id).slice(0, 60);
+  if (q.phone) query.phone = 'eq.' + (normPKPhone(q.phone) || String(q.phone).slice(0, 20));
   if (q.status) query.status = 'in.(' + String(q.status).split(',').filter(s => HR_STATUS.indexOf(s.trim()) >= 0).map(s => s.trim()).join(',') + ')';
-  if (q.id) query.id = 'eq.' + q.id;
+  if (q.category) {
+    const cats = String(q.category).split(',').map(c => c.trim()).filter(c => CAT_LABEL[c] !== undefined);
+    if (cats.length) query.category = 'in.(' + cats.join(',') + ')';
+  }
+  if (q.id) query.id = 'eq.' + String(q.id).slice(0, 40);
   ok(res, (await sb('help_requests', { query })) || []);
 }
 
 // Workflow transitions the admin queue can write, in order.
 async function updateHelpRequest(res, req, id, b) {
   const t = readToken(req);
-  if (!t) return fail(res, 'Sign in required — request updates are for the response team', 401);
   const status = String(b.status || '').toLowerCase();
-  if (HR_STATUS.indexOf(status) < 0) return fail(res, 'Status must be pending, assigned, in_progress or resolved', 400);
+  if (status && HR_STATUS.indexOf(status) < 0) return fail(res, 'Status must be pending, assigned, in_progress or resolved', 400);
   const sid = encodeURIComponent(String(id).slice(0, 40));
-  const found = await sb('help_requests', { query: { select: 'id,user_id,status', id: 'eq.' + sid, limit: '1' } }).catch(function () { return []; });
+  const found = await sb('help_requests', { query: { select: 'id,user_id,status,phone', id: 'eq.' + sid, limit: '1' } }).catch(function () { return []; });
   const cur = (found || [])[0];
   if (!cur) return fail(res, 'Request not found', 404);
+  const admin = !!(t && t.role === 'admin');
   // A citizen may only close their own request ("I am safe / no longer need help").
-  if (t.role !== 'admin' && String(cur.user_id) !== String(t.uid)) return fail(res, 'You can only update your own request', 403);
-  if (t.role !== 'admin' && status !== 'resolved') return fail(res, 'Only the response team can move this request forward', 403);
-  const patch = { status: status, updated_at: nowIso() };
+  // Ownership is the account id, or — for guests and for the standalone service pages,
+  // which file requests under a device id — the phone number they were given.
+  const owns = !!t && String(cur.user_id) === String(t.uid);
+  const samePhone = !!(b.phone && cur.phone) && normPKPhone(b.phone) != null && normPKPhone(b.phone) === normPKPhone(cur.phone);
+  if (!admin) {
+    if (!owns && !samePhone) return fail(res, 'You can only update your own request', 403);
+    if (status !== 'resolved') return fail(res, 'Only the response team can move this request forward', 403);
+  }
+  const patch = { updated_at: nowIso() };
+  if (status) patch.status = status;
+  // The service dashboards keep their rider/host/team details inside the description,
+  // so the response team can also rewrite it — admins only, always length-capped.
+  if (b.description != null && admin) {
+    patch.description = String(b.description).slice(0, 2000);
+    if (!status) patch.status = cur.status;   // keep the row unchanged when only notes moved
+  }
   const out = await sb('help_requests', { method: 'PATCH', query: { id: 'eq.' + sid, select: '*' }, body: patch, prefer: 'return=representation' });
   if (!out || !out.length) return fail(res, 'Request not found', 404);
-  ok(res, out[0], 'Request marked ' + (ST_LABEL[status] || status));
+  ok(res, out[0], status ? 'Request marked ' + (ST_LABEL[status] || status) : 'Request updated');
 }
 
 /* ── Registration validation ───────────────────────── */

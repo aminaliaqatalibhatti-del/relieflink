@@ -1256,9 +1256,19 @@ function distLabel(from, p) {
   var d = RL_LIVE.distKm(from, p);
   return d < 1 ? '<1 km' : d.toFixed(d < 10 ? 1 : 0) + ' km';
 }
+/* Only ever pull the rows that belong to THIS citizen: account id, else the saved phone. */
+function myReqUrl() {
+  var sUid = (window.RL_Auth && window.RL_Auth.user() || {}).id;
+  if (sUid) return '/help-requests?user_id=' + encodeURIComponent(sUid);
+  var uu = {}; try { uu = JSON.parse(localStorage.getItem('rl_user') || '{}') || {}; } catch (e) {}
+  var ph = String(uu.phone || '').replace(/\D/g, '');
+  return ph.length >= 10 ? '/help-requests?phone=' + encodeURIComponent(ph) : null;
+}
 function loadMyReqs() {
   var sUid = (window.RL_Auth && window.RL_Auth.user() || {}).id;
-  RL_Get('/help-requests' + (sUid ? '?user_id=' + encodeURIComponent(sUid) : '')).then(function(rows){
+  var url = myReqUrl();
+  if (!url) return;   // guest with no saved number: their requests live on this device only
+  RL_Get(url).then(function(rows){
     if (!Array.isArray(rows) || !rows.length) return;
     if (sUid) rows = rows.filter(function(r){ return String(r.user_id) === String(sUid); }); // defense in depth if server filter is ignored
     myReqs = rows.map(function(row){
@@ -1266,7 +1276,7 @@ function loadMyReqs() {
       if (an && row.urgency === 'critical' && an.triage.recommended !== 'critical') an.triage = { score: Math.max(an.triage.score, 78), recommended: 'critical' };
       return {
         id: row.id, cat: (window.RL_CAT_KEY2LABEL[row.category] || row.category || 'Help Request'),
-        name: row.full_name, phone: row.phone, loc: row.city || '', desc: row.description || '',
+        name: row.full_name, phone: row.phone, loc: row.city || '', desc: String(row.description || '').replace(/\u27e6rl:[\s\S]*?\u27e7/g, '').trim(),
         people: '', urgent: row.urgency === 'critical',
         triage: an ? an.triage : null, needs: an ? an.intent.needs : null, flags: an ? an.intent.flags : null,
         status: (window.RL_HELP_STEP[row.status] || 0), date: (row.created_at || '').slice(0, 10), _live: true, _delivered: true
@@ -1885,7 +1895,8 @@ function pollUrgent(seed){
   if (!uaIsEnabled()) return;
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
   var sUid = (window.RL_Auth && RL_Auth.user() || {}).id;
-  var url = '/help-requests' + (sUid ? '?user_id=' + encodeURIComponent(sUid) : '');
+  var url = myReqUrl();
+  if (!url) return;
   RL_Get(url).then(function(rows){
     if (!Array.isArray(rows)) return;
     var mine = myReqs || [];

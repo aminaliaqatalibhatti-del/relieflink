@@ -183,6 +183,8 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke
 
 <div class="rl-toast" id="toast"></div>
 
+<script src="../config.js"></script>
+<script src="livesync.js"></script>
 <script>
 const KEY    = 'relieflink_missing_requests';
 const STEPS  = ['sent','approved','on_the_way','delivered'];
@@ -233,7 +235,9 @@ function toast(msg){
 }
 
 function update(id, patch){
-  save(load().map(r=> r.id===id ? {...r,...patch,updatedAt:new Date().toISOString()} : r));
+  const list = load().map(r=> r.id===id ? {...r,...patch,updatedAt:new Date().toISOString()} : r);
+  save(list);
+  RLive.after(list);
   render();
 }
 
@@ -354,6 +358,14 @@ function render(){
 
 hydrateIcons();
 render();
+/* live queue: missing-person reports from every citizen device */
+RLive.bind({
+  category:'missing', listKey:KEY, admin:true,
+  summary: r => 'Missing '+(r.pname||'person')+', '+(r.age||'?')+' yrs '+(r.gender||'')+' · last seen '+(r.seenDate||'')+' '+(r.seenTime||'')+' at '+(r.seenPlace||'')+' · reporter '+(r.rname||'')+' '+(r.rphone||''),
+  onChanged: function(){ hydrateIcons(); render(); }
+});
+RLive.sync().then(function(){ render(); });
+RLive.watch();
 </script>
 </body>
 </html>

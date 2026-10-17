@@ -281,6 +281,8 @@ select.field-input { appearance:auto; }
 </div>
 <div class="rl-toast" id="toast"></div>
 
+<script src="../config.js"></script>
+<script src="livesync.js"></script>
 <script>
 const KEY    = 'relieflink_missing_requests';
 const STEPS  = ['sent','approved','on_the_way','delivered'];
@@ -402,6 +404,7 @@ function submitReq(e){
     updatedAt: new Date().toISOString()
   });
   save(list);
+  RLive.after(list);
   e.target.reset();
   document.getElementById('reqForm').classList.remove('visible');
   currentType = null;
@@ -411,7 +414,9 @@ function submitReq(e){
 }
 
 function update(id,patch){
-  save(load().map(r=>r.id===id?{...r,...patch,updatedAt:new Date().toISOString()}:r));
+  const list = load().map(r=>r.id===id?{...r,...patch,updatedAt:new Date().toISOString()}:r);
+  save(list);
+  RLive.after(list);
   render();
 }
 
@@ -464,6 +469,14 @@ function render(){
 
 hydrateIcons();
 render();
+/* live: the missing-persons desk gets the report immediately */
+RLive.bind({
+  category:'missing', listKey:KEY, mine:true, uid: myId,
+  summary: r => 'Missing '+(r.pname||'person')+', '+(r.age||'?')+' yrs '+(r.gender||'')+' · last seen '+(r.seenDate||'')+' '+(r.seenTime||'')+' at '+(r.seenPlace||'')+' · reporter '+(r.rname||'')+' '+(r.rphone||''),
+  onChanged: function(){ hydrateIcons(); render(); }
+});
+RLive.sync().then(function(){ render(); });
+RLive.watch();
 </script>
 </body>
 </html>

@@ -165,6 +165,8 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke
 
 <div class="rl-toast" id="toast"></div>
 
+<script src="../config.js"></script>
+<script src="livesync.js"></script>
 <script>
 const KEY    = 'relieflink_recovery_requests';
 const STEPS  = ['sent','approved','on_the_way','delivered'];
@@ -205,7 +207,9 @@ function toast(msg){
 }
 
 function update(id, patch){
-  save(load().map(r=> r.id===id ? {...r,...patch,updatedAt:new Date().toISOString()} : r));
+  const list = load().map(r=> r.id===id ? {...r,...patch,updatedAt:new Date().toISOString()} : r);
+  save(list);
+  RLive.after(list);
   render();
 }
 
@@ -302,6 +306,14 @@ function render(){
 }
 
 render();
+/* live queue: damage reports from every citizen device */
+RLive.bind({
+  category:'recovery', listKey:KEY, admin:true,
+  summary: r => (r.catLabel||'Damage report')+' · '+(r.severity||'')+' · '+(r.rooms||0)+' rooms · '+(r.people||1)+' people · '+(r.address||'')+(r.landmark?' near '+r.landmark:''),
+  onChanged: render
+});
+RLive.sync().then(render);
+RLive.watch();
 </script>
 </body>
 </html>
