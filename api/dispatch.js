@@ -572,12 +572,14 @@ function nextQuestion(i) {
   return 'Enter your area or nearest landmark so the team reaches the right place.';
 }
 
-/* Copilot LLM: Gemini (Google AI Studio). The key is read from the Vercel project
-   env var GEMINI_API_KEY — never commit it, this repository is public.
-   gemini-2.0-flash / gemini-2.5-flash are retired for newer keys, and the current
-   aliases answer 503 when Google is busy, so models are tried in order. */
+/* Copilot LLM chain: Gemini if GEMINI_API_KEY is set, then Groq if GROQ_API_KEY is
+   set, then Pollinations (free, no key) so the chat always answers with a real model.
+   Keys belong in Vercel env vars — never commit them, this repository is public.
+   gemini-2.0-flash / gemini-2.5-flash are retired for newer keys and the live aliases
+   answer 503 when Google is busy, so each provider falls through to the next. */
 const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-flash-lite-latest'];
-const CP_SYSTEM = 'You are ReliefLink PK disaster copilot. The citizen is writing from a disaster zone in Pakistan, in English, Urdu or Roman Urdu. Reply ONLY JSON: {"incident_type":"flood|earthquake|fire|storm|landslide|medical|missing|other","needs":["rescue","evacuation","medical","shelter","food_water","transport","search","assessment"],"people_count":number,"urgency":"critical|high|medium|low","flags":["trapped","injured","children","elderly","pregnant"],"reply":"one short caring sentence in the SAME language as the user"}. Vary the wording of reply naturally each time, acknowledge what they just said, never repeat yourself, never invent facts and never claim help has been dispatched.';
+const LLM_MODELS = ['openai', 'openai-fast', 'mistral'];
+const CP_SYSTEM = 'You are ReliefLink PK disaster copilot. The citizen is writing from a disaster zone in Pakistan, in English, Urdu or Roman Urdu. Reply ONLY JSON, no prose around it: {"incident_type":"flood|earthquake|fire|storm|landslide|medical|missing|other","needs":["rescue","evacuation","medical","shelter","food_water","transport","search","assessment"],"people_count":number,"urgency":"critical|high|medium|low","flags":["trapped","injured","children","elderly","pregnant"],"reply":"one short caring sentence"}. Write reply in the SAME script the user used: Roman Urdu in Latin letters for Roman Urdu (e.g. "Allah aap ko hifazat mein rakhe"), Urdu script for Urdu, English for English — never Devanagari. Vary the wording each time, answer what they just said, never repeat yourself, never invent facts, never claim help has been dispatched.';
 const CP_NEEDS = ['rescue', 'evacuation', 'medical', 'shelter', 'food_water', 'transport', 'search', 'assessment'];
 const CP_TYPES = ['flood', 'earthquake', 'fire', 'storm', 'landslide', 'medical', 'missing', 'other'];
 const CP_URGENCY = ['critical', 'high', 'medium', 'low'];
@@ -592,7 +594,21 @@ function parseJsonLoose(text) {
   return null;
 }
 
-// Returns the parsed model answer, or null so the caller can use the rule engine.
+function toOpenAiMessages(message, history) {
+  const msgs = [{ role: 'system', content: CP_SYSTEM }];
+  (Array.isArray(history) ? history : []).slice(-6).forEach(function (h) {
+    const text = String((h && h.text) || '').slice(0, 800);
+    if (text) msgs.push({ role: h.role === 'model' ? 'assistant' : 'user', content: text });
+  });
+  msgs.push({ role: 'user', content: message });
+  return msgs;
+}
+
+function timeoutSignal(ms) {
+  return typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined;
+}
+
+// Returns the parsed model answer (with _model), or null so the caller can try the next provider.
 async function geminiReply(message, history) {
   const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!key || !message) return null;
@@ -614,7 +630,7 @@ async function geminiReply(message, history) {
           // thinking models spend this budget on hidden tokens too — 400 truncated the JSON
           generationConfig: { temperature: 0.9, topP: 0.95, maxOutputTokens: 2048, responseMimeType: 'application/json' }
         }),
-        signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(12000) : undefined
+        signal: timeoutSignal(14000)
       });
       if (!r.ok) continue;
       const j = await r.json();
@@ -626,13 +642,39 @@ async function geminiReply(message, history) {
   return null;
 }
 
-// Copilot: Gemini LLM if GEMINI_API_KEY env is set, otherwise the deterministic rule engine.
+// Any OpenAI-compatible chat endpoint: Gemini key off, Groq, or free Pollinations.
+async function openAiReply(url, headers, models, message, history, tag) {
+  if (!message) return null;
+  const msgs = toOpenAiMessages(message, history);
+  for (const model of models) {
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: Object.assign({ 'Content-Type': 'application/json' }, headers || {}),
+        body: JSON.stringify({ model: model, messages: msgs, temperature: 0.9, seed: Math.floor(Math.random() * 1e9) }),
+        signal: timeoutSignal(16000)
+      });
+      if (!r.ok) continue;
+      const j = await r.json();
+      const choice = (j.choices || [])[0];
+      const text = choice && choice.message ? choice.message.content : '';
+      const parsed = parseJsonLoose(text);
+      if (parsed && parsed.reply) { parsed._model = model; parsed._engine = tag; return parsed; }
+    } catch (e) { /* rate limited or down — try the next model */ }
+  }
+  return null;
+}
+
+// Copilot: first live LLM that answers wins, otherwise the deterministic rule engine.
 async function copilot(res, b) {
   const message = String(b.message || '').slice(0, 800);
   const rule = extractIntent(message);
   const tri = triageScore(rule.urgency, rule.people_count, rule.flags);
-  const g = await geminiReply(message, b.history);
+  const g = (await geminiReply(message, b.history)) ||
+    (process.env.GROQ_API_KEY ? await openAiReply('https://api.groq.com/openai/v1/chat/completions', { Authorization: 'Bearer ' + process.env.GROQ_API_KEY }, ['llama-3.3-70b-versatile'], message, b.history, 'groq') : null) ||
+    (process.env.LLM_OFFLINE === '1' ? null : await openAiReply('https://text.pollinations.ai/openai', {}, (process.env.LLM_MODELS || LLM_MODELS.join(',')).split(','), message, b.history, 'live'));
   if (g) {
+    const label = g._engine === 'groq' ? 'Groq AI' : g._engine === 'live' ? 'Live AI' : 'Gemini AI';
     const i2 = {
       incident_type: CP_TYPES.indexOf(g.incident_type) >= 0 ? g.incident_type : rule.incident_type,
       needs: (Array.isArray(g.needs) ? g.needs : rule.needs).filter(function (n) { return CP_NEEDS.indexOf(n) >= 0; }).slice(0, 4),
@@ -642,12 +684,12 @@ async function copilot(res, b) {
     };
     if (!i2.needs.length) i2.needs = rule.needs;
     const t2 = triageScore(i2.urgency, i2.people_count, i2.flags);
-    return ok(res, { engine: 'gemini', model: g._model, intent: i2, triage: t2, guidance: GUIDANCE[i2.incident_type] || GUIDANCE.other, question: nextQuestion(i2), reply: String(g.reply).slice(0, 300), draft: { incident_type: i2.incident_type, needs: i2.needs, people_count: i2.people_count, urgency: i2.urgency, description: message } }, 'Copilot reply');
+    return ok(res, { engine: g._engine || 'gemini', engineLabel: label, model: g._model, intent: i2, triage: t2, guidance: GUIDANCE[i2.incident_type] || GUIDANCE.other, question: nextQuestion(i2), reply: String(g.reply).slice(0, 300), draft: { incident_type: i2.incident_type, needs: i2.needs, people_count: i2.people_count, urgency: i2.urgency, description: message } }, 'Copilot reply');
   }
   const LABEL = { flood: 'flooding', earthquake: 'an earthquake', fire: 'a fire', storm: 'a storm or heavy rain', landslide: 'a landslide', medical: 'a medical emergency', missing: 'a missing person', other: 'an emergency' };
   const reply = 'This sounds like ' + (LABEL[rule.incident_type] || 'an emergency') +
     (rule.flags.length ? ' with ' + rule.flags.join(', ') : '') + '. Call Rescue 1122 now and stay on this channel — the AI helper is offline right now, so these are keyword-based answers.';
-  ok(res, { engine: 'rules', intent: rule, triage: tri, guidance: GUIDANCE[rule.incident_type] || GUIDANCE.other, question: nextQuestion(rule), reply, draft: { incident_type: rule.incident_type, needs: rule.needs, people_count: rule.people_count, urgency: rule.urgency, description: message } }, 'Copilot reply');
+  ok(res, { engine: 'rules', engineLabel: 'Offline helper', intent: rule, triage: tri, guidance: GUIDANCE[rule.incident_type] || GUIDANCE.other, question: nextQuestion(rule), reply, draft: { incident_type: rule.incident_type, needs: rule.needs, people_count: rule.people_count, urgency: rule.urgency, description: message } }, 'Copilot reply');
 }
 
 /* ── Mesh Network (real-time zone relay) ─────────────────

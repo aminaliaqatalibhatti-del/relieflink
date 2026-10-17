@@ -1589,7 +1589,7 @@ function cpRender(d, el) {
     html += '<div class="cp-guide"><b>Immediate safety:</b><br>• ' + d.guidance.map(esc).join('<br>• ') + '</div>';
   }
   if (d.question) html += '\n<b>' + esc(d.question) + '</b>';
-  html += '<div class="cp-eng">' + (d.engine === 'gemini' ? 'Gemini AI' : 'offline helper') + '</div>';
+  html += '<div class="cp-eng">' + esc(d.engineLabel || (d.engine === 'rules' ? 'Offline helper' : 'Live AI')) + '</div>';
   el.innerHTML = html;
   var dr = RL_$('cpDraft');
   if (dr && d.draft) {
