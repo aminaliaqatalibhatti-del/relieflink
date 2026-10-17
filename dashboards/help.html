@@ -577,7 +577,7 @@
       </div>
       <div class="map-box fade-up" style="height:360px;position:relative;overflow:hidden">
         <div id="helpMap" style="position:absolute;inset:0"></div>
-        <div id="nearMapTag" style="position:absolute;top:10px;left:12px;z-index:600;background:rgba(20,40,25,.78);color:#F5EEDB;padding:5px 11px;border-radius:10px;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.25)">Set your location to see what is nearby</div>
+        <div id="nearMapTag" style="position:absolute;top:10px;right:12px;z-index:600;background:rgba(20,40,25,.78);color:#F5EEDB;padding:5px 11px;border-radius:10px;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.25)">Set your location to see what is nearby</div>
       </div>
     </div>
   </div>
@@ -1290,7 +1290,9 @@ function nearGo(lat,lng){
 function paintNearMap(){
   if (!window.L || !HELP_MAP || !NEAR.pt) return;
   NEAR_MK.forEach(function(m){ try{ HELP_MAP.removeLayer(m); }catch(e){} }); NEAR_MK = [];
-  var me = window.L.circleMarker([NEAR.pt.lat,NEAR.pt.lng],{radius:9,color:'#B91C1C',weight:2,fillColor:'#B91C1C',fillOpacity:.95}).addTo(HELP_MAP).bindPopup('<b>You are here</b>'+(NEAR.gps?'':'<br>(searched spot)')); NEAR_MK.push(me);
+  var me = window.L.circleMarker([NEAR.pt.lat,NEAR.pt.lng],{radius:9,color:'#B91C1C',weight:2,fillColor:'#B91C1C',fillOpacity:.95}).addTo(HELP_MAP).bindPopup('<b>You are here</b>'+(NEAR.gps?'':'<br>(searched spot)'));
+  try{ me.bindTooltip('You are here',{permanent:true,direction:'top',offset:[0,-6]}); }catch(e){}
+  NEAR_MK.push(me);
   var pts = [[NEAR.pt.lat,NEAR.pt.lng]];
   NEAR.hospitals.concat(NEAR.shelters).forEach(function(f){
     var c = f.kind==='hospital' ? '#4C8DF6' : '#2E7D32';
