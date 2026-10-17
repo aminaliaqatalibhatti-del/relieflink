@@ -3,6 +3,9 @@
   "framework": null,
   "buildCommand": "",
   "outputDirectory": ".",
+  "functions": {
+    "api/dispatch.js": { "maxDuration": 30 }
+  },
   "rewrites": [
     { "source": "/api/v1/(.*)", "destination": "/api/dispatch?path=$1" }
   ]

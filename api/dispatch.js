@@ -578,7 +578,7 @@ function nextQuestion(i) {
    gemini-2.0-flash / gemini-2.5-flash are retired for newer keys and the live aliases
    answer 503 when Google is busy, so each provider falls through to the next. */
 const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-flash-lite-latest'];
-const LLM_MODELS = ['openai', 'openai-fast', 'mistral'];
+const LLM_MODELS = ['openai-fast', 'openai', 'mistral'];   // free tier = 1 reply / 30 s per IP, so keep the list short and quick
 const CP_SYSTEM = 'You are ReliefLink PK disaster copilot. The citizen is writing from a disaster zone in Pakistan, in English, Urdu or Roman Urdu. Reply ONLY JSON, no prose around it: {"incident_type":"flood|earthquake|fire|storm|landslide|medical|missing|other","needs":["rescue","evacuation","medical","shelter","food_water","transport","search","assessment"],"people_count":number,"urgency":"critical|high|medium|low","flags":["trapped","injured","children","elderly","pregnant"],"reply":"one short caring sentence"}. Write reply in the SAME script the user used: Roman Urdu in Latin letters for Roman Urdu (e.g. "Allah aap ko hifazat mein rakhe"), Urdu script for Urdu, English for English — never Devanagari. Vary the wording each time, answer what they just said, never repeat yourself, never invent facts, never claim help has been dispatched.';
 const CP_NEEDS = ['rescue', 'evacuation', 'medical', 'shelter', 'food_water', 'transport', 'search', 'assessment'];
 const CP_TYPES = ['flood', 'earthquake', 'fire', 'storm', 'landslide', 'medical', 'missing', 'other'];
@@ -642,9 +642,15 @@ async function geminiReply(message, history) {
   return null;
 }
 
-// Any OpenAI-compatible chat endpoint: Gemini key off, Groq, or free Pollinations.
+// Any OpenAI-compatible chat endpoint: Groq, or free Pollinations (no key).
+const CP_CACHE = new Map();   // same question twice inside 5 min must not burn the free quota
+function cacheKey(message) { return String(message).toLowerCase().replace(/[^a-z0-9\u0600-\u06ff ]/g, '').trim().slice(0, 160); }
+
 async function openAiReply(url, headers, models, message, history, tag, errs) {
   if (!message) return null;
+  const ck = tag + ':' + cacheKey(message);
+  const hit = CP_CACHE.get(ck);
+  if (hit && Date.now() - hit.at < 300000) { const c = Object.assign({}, hit.g); c._cached = true; return c; }
   const msgs = toOpenAiMessages(message, history);
   for (const model of models) {
     try {
@@ -652,14 +658,19 @@ async function openAiReply(url, headers, models, message, history, tag, errs) {
         method: 'POST',
         headers: Object.assign({ 'Content-Type': 'application/json' }, headers || {}),
         body: JSON.stringify({ model: model, messages: msgs, temperature: 0.9, seed: Math.floor(Math.random() * 1e9) }),
-        signal: timeoutSignal(16000)
+        signal: timeoutSignal(11000)
       });
       if (!r.ok) { if (errs) errs.push(tag + ':' + model + ' HTTP ' + r.status + ' ' + String(await r.text()).slice(0, 120)); continue; }
       const j = await r.json();
       const choice = (j.choices || [])[0];
       const text = choice && choice.message ? choice.message.content : '';
       const parsed = parseJsonLoose(text);
-      if (parsed && parsed.reply) { parsed._model = model; parsed._engine = tag; return parsed; }
+      if (parsed && parsed.reply) {
+        parsed._model = model; parsed._engine = tag;
+        if (CP_CACHE.size > 60) CP_CACHE.clear();
+        CP_CACHE.set(ck, { at: Date.now(), g: parsed });
+        return parsed;
+      }
       if (errs) errs.push(tag + ':' + model + ' unparseable ' + String(text).slice(0, 120));
     } catch (e) { /* rate limited or down — try the next model */
       if (errs) errs.push(tag + ':' + model + ' ' + (e && e.name ? e.name : 'error') + ' ' + String(e && e.message || '').slice(0, 90));
@@ -676,7 +687,7 @@ async function copilot(res, b) {
   const errs = [];
   const g = (await geminiReply(message, b.history)) ||
     (process.env.GROQ_API_KEY ? await openAiReply('https://api.groq.com/openai/v1/chat/completions', { Authorization: 'Bearer ' + process.env.GROQ_API_KEY }, ['llama-3.3-70b-versatile'], message, b.history, 'groq', errs) : null) ||
-    (process.env.LLM_OFFLINE === '1' ? null : await openAiReply('https://text.pollinations.ai/openai', {}, (process.env.LLM_MODELS || LLM_MODELS.join(',')).split(','), message, b.history, 'live', errs));
+    (process.env.LLM_OFFLINE === '1' ? null : await openAiReply('https://text.pollinations.ai/openai?referrer=relieflink', {}, (process.env.LLM_MODELS || LLM_MODELS.join(',')).split(','), message, b.history, 'live', errs));
   if (g) {
     const label = g._engine === 'groq' ? 'Groq AI' : g._engine === 'live' ? 'Live AI' : 'Gemini AI';
     const i2 = {
