@@ -94,6 +94,9 @@ function readToken(req) {
 function publicUser(u) { return { id: u.id, full_name: u.full_name, phone: u.phone, email: u.email || null, role: u.role, city: u.city, status: u.status || 'active' }; }
 
 /* ── Endpoint handlers ─────────────────────────────────── */
+const HR_STATUS = ['pending', 'assigned', 'in_progress', 'resolved'];
+const HR_PRIORITY = ['low', 'medium', 'high', 'critical'];
+const TASK_STATUS = ['open', 'claimed', 'in_progress', 'completed'];
 async function createHelpRequest(res, b) {
   const p = normPKPhone(b.phone); // never reject an emergency request, just clean the number
   const row = {
@@ -111,7 +114,28 @@ async function listHelpRequests(res, q) {
   const limit = Math.min(parseInt(q.limit, 10) || 100, 500);
   const query = { select: '*', order: 'created_at.desc', limit: String(limit) };
   if (q.user_id) query.user_id = 'eq.' + q.user_id;
+  if (q.status) query.status = 'in.(' + String(q.status).split(',').filter(s => HR_STATUS.indexOf(s.trim()) >= 0).map(s => s.trim()).join(',') + ')';
+  if (q.id) query.id = 'eq.' + q.id;
   ok(res, (await sb('help_requests', { query })) || []);
+}
+
+// Workflow transitions the admin queue can write, in order.
+async function updateHelpRequest(res, req, id, b) {
+  const t = readToken(req);
+  if (!t) return fail(res, 'Sign in required — request updates are for the response team', 401);
+  const status = String(b.status || '').toLowerCase();
+  if (HR_STATUS.indexOf(status) < 0) return fail(res, 'Status must be pending, assigned, in_progress or resolved', 400);
+  const sid = encodeURIComponent(String(id).slice(0, 40));
+  const found = await sb('help_requests', { query: { select: 'id,user_id,status', id: 'eq.' + sid, limit: '1' } }).catch(function () { return []; });
+  const cur = (found || [])[0];
+  if (!cur) return fail(res, 'Request not found', 404);
+  // A citizen may only close their own request ("I am safe / no longer need help").
+  if (t.role !== 'admin' && String(cur.user_id) !== String(t.uid)) return fail(res, 'You can only update your own request', 403);
+  if (t.role !== 'admin' && status !== 'resolved') return fail(res, 'Only the response team can move this request forward', 403);
+  const patch = { status: status, updated_at: nowIso() };
+  const out = await sb('help_requests', { method: 'PATCH', query: { id: 'eq.' + sid, select: '*' }, body: patch, prefer: 'return=representation' });
+  if (!out || !out.length) return fail(res, 'Request not found', 404);
+  ok(res, out[0], 'Request marked ' + (ST_LABEL[status] || status));
 }
 
 /* ── Registration validation ───────────────────────── */
@@ -331,8 +355,53 @@ async function adminSignin(res, b) {
   return fail(res, 'Enter your admin email and password', 400);
 }
 
-async function listTasks(res) {
-  ok(res, (await sb('volunteer_tasks', { query: { select: '*', status: 'eq.open', order: 'priority.desc,created_at.desc', limit: '100' } })) || []);
+async function listTasks(res, q) {
+  const query = { select: '*', order: 'priority.desc,created_at.desc', limit: '200' };
+  if (q.status) query.status = 'eq.' + String(q.status).slice(0, 20);
+  if (q.request_id) query.request_id = 'eq.' + String(q.request_id).slice(0, 40);
+  ok(res, (await sb('volunteer_tasks', { query })) || []);
+}
+
+// Admin dispatch: turn a help request (or any job) into a volunteer task, optionally
+// handed straight to a matched volunteer — then the request moves to "assigned".
+async function createTask(res, req, b) {
+  const t = readToken(req);
+  if (!t) return fail(res, 'Sign in required — only the response team can create tasks', 401);
+  const title = String(b.title || '').trim().slice(0, 160);
+  if (!title) return fail(res, 'Task title is required', 400);
+  const vol = String(b.assigned_volunteer_id || '').slice(0, 40);
+  const row = {
+    id: rid('task'),
+    request_id: b.request_id ? String(b.request_id).slice(0, 40) : null,
+    title: title,
+    category: String(b.category || 'special').slice(0, 30),
+    city: String(b.city || '').slice(0, 80),
+    distance_km: Math.min(2000, +b.distance_km || 0),
+    skills_needed: (Array.isArray(b.skills_needed) ? b.skills_needed : []).slice(0, 10).map(String),
+    priority: HR_PRIORITY.indexOf(String(b.priority || '').toLowerCase()) >= 0 ? String(b.priority).toLowerCase() : 'medium',
+    status: vol ? 'claimed' : 'open',
+    assigned_volunteer_id: vol || null,
+    progress_note: String(b.progress_note || '').slice(0, 500),
+    created_at: nowIso(), updated_at: nowIso()
+  };
+  if (vol) row.completed_at = null;
+  let out = null;
+  try {
+    out = await sb('volunteer_tasks', { method: 'POST', body: row, prefer: 'return=representation' });
+  } catch (e) {
+    // Older task tables may not carry every optional column — retry with the core fields.
+    const min = { id: row.id, title: row.title, category: row.category, city: row.city, priority: row.priority,
+      status: row.status, assigned_volunteer_id: row.assigned_volunteer_id, created_at: row.created_at, updated_at: row.updated_at };
+    if (row.request_id) min.request_id = row.request_id;
+    try { out = await sb('volunteer_tasks', { method: 'POST', body: min, prefer: 'return=representation' }); }
+    catch (e2) { return fail(res, 'Could not save the task — volunteer_tasks table needs to be created (db/migrations/002)', 500); }
+  }
+  // Keep the citizen's tracker honest: a dispatched request is no longer just "pending".
+  if (row.request_id) {
+    await sb('help_requests', { method: 'PATCH', query: { id: 'eq.' + encodeURIComponent(row.request_id) },
+      body: { status: 'assigned', updated_at: nowIso() }, prefer: 'return=representation' }).catch(function () {});
+  }
+  ok(res, (out && out[0]) || row, vol ? 'Task dispatched to volunteer' : 'Task opened for volunteers');
 }
 async function myAssignments(res, q) {
   if (!q.volunteer_id) return ok(res, []);
@@ -346,13 +415,25 @@ async function volunteerStats(res, q) {
 async function claimTask(res, id, b) {
   const patch = { assigned_volunteer_id: b.volunteer_id || null, status: 'claimed', updated_at: nowIso() };
   const out = await sb('volunteer_tasks', { method: 'PATCH', query: { id: 'eq.' + id, select: '*' }, body: patch, prefer: 'return=representation' });
-  ok(res, (out && out[0]) || patch, 'Task claimed');
+  const task = (out && out[0]) || patch;
+  if (task.request_id) {
+    await sb('help_requests', { method: 'PATCH', query: { id: 'eq.' + encodeURIComponent(String(task.request_id)) }, body: { status: 'assigned', updated_at: nowIso() } }).catch(function () {});
+  }
+  ok(res, task, 'Task claimed');
 }
 async function taskProgress(res, id, b) {
-  const patch = { status: b.status || 'in_progress', progress_note: b.progress_note || '', updated_at: nowIso() };
-  if (b.status === 'completed') patch.completed_at = nowIso();
+  const status = String(b.status || 'in_progress').toLowerCase();
+  if (TASK_STATUS.indexOf(status) < 0) return fail(res, 'Status must be open, claimed, in_progress or completed', 400);
+  const patch = { status: status, progress_note: b.progress_note || '', updated_at: nowIso() };
+  if (status === 'completed') patch.completed_at = nowIso();
   const out = await sb('volunteer_tasks', { method: 'PATCH', query: { id: 'eq.' + id, select: '*' }, body: patch, prefer: 'return=representation' });
-  ok(res, (out && out[0]) || patch, 'Progress saved');
+  const task = (out && out[0]) || patch;
+  // A finished job closes the citizen's request; work started shows as in progress.
+  if (task.request_id) {
+    const linked = status === 'completed' ? 'resolved' : (status === 'in_progress' || status === 'claimed') ? 'in_progress' : null;
+    if (linked) await sb('help_requests', { method: 'PATCH', query: { id: 'eq.' + encodeURIComponent(String(task.request_id)) }, body: { status: linked, updated_at: nowIso() } }).catch(function () {});
+  }
+  ok(res, task, 'Progress saved');
 }
 async function adminOverview(res) {
   const [total, resolved, pending, vols, openTasks] = await Promise.all([
@@ -785,7 +866,11 @@ module.exports = async function handler(req, res) {
 
   try {
     const r0 = seg[0];
-    if (r0 === 'help-requests') return method === 'POST' ? await createHelpRequest(res, b) : await listHelpRequests(res, q);
+    if (r0 === 'help-requests') {
+      if (seg[1] && method === 'PATCH') return await updateHelpRequest(res, req, seg[1], b);
+      if (seg[1] && method === 'GET') { q.id = seg[1]; return await listHelpRequests(res, q); }
+      return method === 'POST' ? await createHelpRequest(res, b) : await listHelpRequests(res, q);
+    }
     if (r0 === 'auth') {
       if (seg[1] === 'register' && method === 'POST') return await register(res, b);
       if (seg[1] === 'signin' && method === 'POST') return await signin(res, b);
@@ -803,7 +888,8 @@ module.exports = async function handler(req, res) {
       if (seg[1] === 'volunteer-stats') return await volunteerStats(res, q);
       if (seg[2] === 'claim' && method === 'POST') return await claimTask(res, seg[1], b);
       if (seg[2] === 'progress' && (method === 'PATCH' || method === 'POST')) return await taskProgress(res, seg[1], b);
-      if (!seg[1]) return await listTasks(res);
+      if (!seg[1] && method === 'POST') return await createTask(res, req, b);
+      if (!seg[1]) return await listTasks(res, q);
       return fail(res, 'Unknown tasks endpoint', 404);
     }
     if (r0 === 'analytics' && seg[1] === 'admin-overview') return await adminOverview(res);

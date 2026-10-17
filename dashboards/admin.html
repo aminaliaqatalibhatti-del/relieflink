@@ -271,6 +271,8 @@ var HOSP = [];    /* hospitals — LIVE from /hospitals */
 var TEAMS = [];   /* rescue teams — no live endpoint yet; shows an empty state until the backend provides it */
 var volReqs = []; /* volunteers — LIVE from /volunteers + admin-overview */
 var helpReqs = [];/* help requests — LIVE from /help-requests */
+var VOLNAME = {}; /* volunteer id → name, for dispatch labels */
+var TASKROWS = [];/* live volunteer_tasks rows — links a request to its dispatched volunteer */
 var SC_flood = {Critical:'#EF5B5B',High:'#F58A3D',Moderate:'#F5B83D',Low:'#3CC08E'};
 var TC_team  = {Available:'#3CC08E',Dispatched:'#F58A3D',Busy:'#EF5B5B'};
 var REQ_STEPS = ['Assign','Dispatch','Complete'];
@@ -385,15 +387,23 @@ function renderVolReqs(id) {
   if (RL_$('reqBadge')) RL_$('reqBadge').textContent = pendingN;
   RL_Icons();
 }
+function assignName(requestId) {
+  for (var i = 0; i < TASKROWS.length; i++) {
+    var t = TASKROWS[i];
+    if (t.request_id === requestId && t.assigned_volunteer_id) return VOLNAME[t.assigned_volunteer_id] || 'Volunteer ' + String(t.assigned_volunteer_id).slice(-4);
+  }
+  return '';
+}
 function loadVols() {
   jget('/volunteers').then(function(j) {
     var a = j && j.data;
     if (!Array.isArray(a) || !a.length) return;
     volReqs = a.slice(0, 40).map(function(v) {
+      VOLNAME[v.id] = v.full_name || 'Volunteer';
       return { id: v.id, name: v.full_name || 'Volunteer', skills: (Array.isArray(v.skills) ? v.skills.join(', ') : (v.skills || '')),
                assets: v.assets || [], verified: !!v.verified, city: v.city || '', availability: v.availability || '' };
     });
-    renderVolReqs('volReqs'); renderVolReqs('volReqs2');
+    renderVolReqs('volReqs'); renderVolReqs('volReqs2'); renderHelpReqs();
   }).catch(function(){});
 }
 function actReq(i) {
@@ -425,16 +435,40 @@ function renderHelpReqs() {
     var actions = r.st < 3
       ? '<div style="display:flex;gap:6px;align-items:center">'
           + (r.an ? '<button class="action-btn" style="padding:8px 12px;font-size:12px;background:var(--p);color:#fff;border-color:var(--p)" onclick="openMatch(' + i + ')"><i data-i="users"></i>Match</button>' : '')
-          + '<button class="action-btn" style="padding:8px 12px;font-size:12px" onclick="advHR(' + i + ')">' + REQ_STEPS[r.st] + '</button></div>'
+          + (r.id
+              ? '<button class="action-btn" style="padding:8px 12px;font-size:12px" ' + (r.busy ? 'disabled ' : '') + 'onclick="advHR(' + i + ')">' + (r.busy ? 'Saving…' : REQ_STEPS[r.st]) + '</button>'
+              : RL_Tag('Offline', '#8A8A8A'))
+          + '</div>'
       : RL_Tag('Done','#3CC08E');
+    var who = r.id ? assignName(r.id) : '';
+    var sub = r.type + ' · ' + r.p + ' people · ' + r.area + (r.ph ? ' · ' + r.ph : '') + (who ? ' · → ' + who : '');
     return '<div class="item"><div class="item-icon" style="background:' + c + '22;color:' + c + '"><i data-i="' + (TI[r.type]||'inbox') + '"></i></div>'
-         + '<div class="t">' + r.n + '<small>' + r.type + ' · ' + r.p + ' people · ' + r.area + '</small>' + tri + '</div>'
+         + '<div class="t">' + r.n + '<small>' + sub + '</small>' + tri + '</div>'
          + actions + '</div>';
   }).join('');
   RL_$('hreqCount').textContent = helpReqs.filter(function(r) { return r.st < 3; }).length + ' open';
   RL_Icons();
 }
-function advHR(i) { helpReqs[i].st++; renderHelpReqs(); RL_Toast('Status updated'); }
+function advHR(i) {
+  var r = helpReqs[i];
+  if (!r || r.busy) return;
+  var next = ['assigned', 'in_progress', 'resolved'][r.st];
+  if (!next) return;
+  if (!r.id) { RL_Toast('This request is not on the server yet'); return; }
+  r.busy = true; renderHelpReqs();
+  RL_Send('PATCH', '/help-requests/' + encodeURIComponent(r.id), { status: next }).then(function(res) {
+    r.busy = false;
+    if (res && res.ok) {
+      r.st = HR_ST[next]; r.status = next;
+      if (next === 'resolved') TASKROWS = TASKROWS.filter(function(t) { return t.request_id !== r.id; });
+      renderHelpReqs();
+      RL_Toast(next === 'resolved' ? 'Closed — citizen now sees "Resolved"' : 'Saved — citizen tracker: ' + cap(next.replace('_', ' ')));
+    } else {
+      renderHelpReqs();
+      RL_Toast(res && res.message ? res.message : 'Could not save — sign in as admin first');
+    }
+  });
+}
 
 /* ── #3 SMART VOLUNTEER MATCHING — rank volunteers by skills, distance, resources & availability ── */
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]; }); }
@@ -465,25 +499,55 @@ function matchVolunteers(r) {
     return { v: v, score: score, why: why };
   }).sort(function(a, b) { return b.score - a.score; });
 }
+var MATCH_I = -1, MATCH_LIST = [];
 function openMatch(i) {
   var r = helpReqs[i]; if (!r || !window.RL_AI) { RL_Toast('Matching needs the AI engine'); return; }
+  MATCH_I = i;
   RL_OpenModal('matchModal');
   var sub = RL_$('matchSub');
   if (sub) sub.innerHTML = 'For <b>' + esc(r.n) + '</b> · ' + r.type + (r.area ? ' · ' + esc(r.area) : '') + ' · AI ' + RL_AI.sevLabel(r.an ? r.an.triage.recommended : 'medium');
   var el = RL_$('matchList'); if (!el) return;
   var list = matchVolunteers(r).slice(0, 8);
+  MATCH_LIST = list;
   if (!list.length) { el.innerHTML = '<p class="mute">No volunteers registered yet.</p>'; return; }
   var note = (!list[0] || list[0].score === 0)
     ? '<p class="mute" style="padding:0 4px 8px">No registered volunteer matches these needs yet — showing closest profiles. Verify skills &amp; location before dispatching.</p>'
     : '';
-  el.innerHTML = note + list.map(function(m) {
+  el.innerHTML = note + list.map(function(m, k) {
     var col = m.score >= 65 ? '#3CC08E' : m.score >= 40 ? '#F5B83D' : '#8A8A8A';
     return '<div class="item"><div class="item-icon" style="background:' + col + '22;color:' + col + '"><i data-i="user"></i></div>'
       + '<div class="t"><b>' + esc(m.v.name) + '</b><small>' + (m.why.length ? esc(m.why.join(' · ')) : 'General volunteer' + (m.v.city ? ' · ' + esc(m.v.city) : '')) + '</small>'
       + '<div class="bar"><i style="width:' + m.score + '%;background:' + col + '"></i></div></div>'
-      + RL_Tag(m.score + '/100', col) + '</div>';
+      + (r.id
+          ? '<button class="action-btn" style="padding:8px 12px;font-size:12px" onclick="dispatchVol(' + k + ')">Assign</button>'
+          : RL_Tag(m.score + '/100', col)) + '</div>';
   }).join('');
   RL_Icons();
+}
+/* Hand the request to a volunteer: creates a real task and moves the citizen tracker to "Assigned" */
+function dispatchVol(k) {
+  var r = helpReqs[MATCH_I], m = MATCH_LIST[k];
+  if (!r || !m) return;
+  if (!r.id) { RL_Toast('This request is not on the server yet'); return; }
+  var an = r.an;
+  RL_Send('POST', '/tasks', {
+    request_id: r.id,
+    title: (r.type || 'Help') + ' — ' + r.n + (r.area ? ' · ' + r.area : ''),
+    category: r.cat || 'special',
+    city: r.area || '',
+    priority: (an && an.triage && an.triage.recommended) || 'medium',
+    skills_needed: (an && an.intent && an.intent.needs) || [],
+    assigned_volunteer_id: m.v.id,
+    progress_note: 'Dispatched from the admin matching engine'
+  }).then(function(res) {
+    if (res && res.ok) {
+      TASKROWS.unshift(res.data);
+      r.st = Math.max(r.st, 1); r.status = 'assigned';
+      RL_CloseModal('matchModal');
+      renderHelpReqs(); loadOverview();
+      RL_Toast(m.v.name + ' assigned · citizen tracker now shows Assigned');
+    } else RL_Toast(res && res.message ? res.message : 'Could not dispatch — task store unavailable');
+  });
 }
 
 function topVols(list) {
@@ -596,7 +660,8 @@ function loadHelpRequests() {
       var pm = /\((\d+) people\)/.exec(desc);
       var an = window.RL_AI ? RL_AI.analyze(desc || (x.category||'')) : null;
       if (an && x.urgency === 'critical' && an.triage.recommended !== 'critical') an.triage = { score: Math.max(an.triage.score, 78), recommended: 'critical' };
-      return { n: x.full_name || 'Citizen', area: x.city || '', type: SHORT_TYPE[x.category] || 'Other',
+      return { id: x.id, n: x.full_name || 'Citizen', area: x.city || '', ph: x.phone || '', status: x.status || 'pending',
+               type: SHORT_TYPE[x.category] || 'Other',
                cat: x.category, desc: desc, lat: x.latitude != null ? +x.latitude : null, lng: x.longitude != null ? +x.longitude : null, an: an,
                p: (an && an.intent.people_count) ? an.intent.people_count : (pm ? parseInt(pm[1],10) : 1),
                st: HR_ST[x.status] != null ? HR_ST[x.status] : 0 };
@@ -604,17 +669,21 @@ function loadHelpRequests() {
     renderHelpReqs();
   });
 }
-/* Open volunteer tasks → "Open Relief Tasks" card */
+/* Open volunteer tasks → "Open Relief Tasks" card + dispatch labels on the request queue */
 function loadOpenTasks() {
   RL_Get('/tasks').then(function(a) {
-    if (!Array.isArray(a) || !a.length || !RL_$('eventsList')) return;
-    RL_$('eventsList').innerHTML = a.slice(0, 3).map(function(t) {
+    if (!Array.isArray(a)) return;
+    TASKROWS = a;
+    var open = a.filter(function(t) { return t.status === 'open'; });
+    if (!RL_$('eventsList')) return;
+    RL_$('eventsList').innerHTML = open.length ? open.slice(0, 3).map(function(t) {
       var c = SEV_C[t.priority] || '#4C8DF6';
       return '<div class="item"><div class="item-icon" style="background:' + c + '22;color:' + c + '"><i data-i="calendar"></i></div>'
            + '<div class="t">' + (t.title || 'Relief Task') + '<small>' + (t.city || 'Location TBD') + ' · ' + cap(t.priority || 'medium') + ' priority</small></div>'
            + RL_Tag('Open', c) + '</div>';
-    }).join('');
+    }).join('') : '<p class="mute" style="padding:10px 0">No open relief tasks — dispatch one from the request queue</p>';
     RL_Icons();
+    renderHelpReqs();
   });
 }
 /* Real alert feed + broadcast */
