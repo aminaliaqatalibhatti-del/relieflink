@@ -643,7 +643,7 @@ async function geminiReply(message, history) {
 }
 
 // Any OpenAI-compatible chat endpoint: Gemini key off, Groq, or free Pollinations.
-async function openAiReply(url, headers, models, message, history, tag) {
+async function openAiReply(url, headers, models, message, history, tag, errs) {
   if (!message) return null;
   const msgs = toOpenAiMessages(message, history);
   for (const model of models) {
@@ -654,13 +654,16 @@ async function openAiReply(url, headers, models, message, history, tag) {
         body: JSON.stringify({ model: model, messages: msgs, temperature: 0.9, seed: Math.floor(Math.random() * 1e9) }),
         signal: timeoutSignal(16000)
       });
-      if (!r.ok) continue;
+      if (!r.ok) { if (errs) errs.push(tag + ':' + model + ' HTTP ' + r.status + ' ' + String(await r.text()).slice(0, 120)); continue; }
       const j = await r.json();
       const choice = (j.choices || [])[0];
       const text = choice && choice.message ? choice.message.content : '';
       const parsed = parseJsonLoose(text);
       if (parsed && parsed.reply) { parsed._model = model; parsed._engine = tag; return parsed; }
-    } catch (e) { /* rate limited or down — try the next model */ }
+      if (errs) errs.push(tag + ':' + model + ' unparseable ' + String(text).slice(0, 120));
+    } catch (e) { /* rate limited or down — try the next model */
+      if (errs) errs.push(tag + ':' + model + ' ' + (e && e.name ? e.name : 'error') + ' ' + String(e && e.message || '').slice(0, 90));
+    }
   }
   return null;
 }
@@ -670,9 +673,10 @@ async function copilot(res, b) {
   const message = String(b.message || '').slice(0, 800);
   const rule = extractIntent(message);
   const tri = triageScore(rule.urgency, rule.people_count, rule.flags);
+  const errs = [];
   const g = (await geminiReply(message, b.history)) ||
-    (process.env.GROQ_API_KEY ? await openAiReply('https://api.groq.com/openai/v1/chat/completions', { Authorization: 'Bearer ' + process.env.GROQ_API_KEY }, ['llama-3.3-70b-versatile'], message, b.history, 'groq') : null) ||
-    (process.env.LLM_OFFLINE === '1' ? null : await openAiReply('https://text.pollinations.ai/openai', {}, (process.env.LLM_MODELS || LLM_MODELS.join(',')).split(','), message, b.history, 'live'));
+    (process.env.GROQ_API_KEY ? await openAiReply('https://api.groq.com/openai/v1/chat/completions', { Authorization: 'Bearer ' + process.env.GROQ_API_KEY }, ['llama-3.3-70b-versatile'], message, b.history, 'groq', errs) : null) ||
+    (process.env.LLM_OFFLINE === '1' ? null : await openAiReply('https://text.pollinations.ai/openai', {}, (process.env.LLM_MODELS || LLM_MODELS.join(',')).split(','), message, b.history, 'live', errs));
   if (g) {
     const label = g._engine === 'groq' ? 'Groq AI' : g._engine === 'live' ? 'Live AI' : 'Gemini AI';
     const i2 = {
@@ -689,7 +693,7 @@ async function copilot(res, b) {
   const LABEL = { flood: 'flooding', earthquake: 'an earthquake', fire: 'a fire', storm: 'a storm or heavy rain', landslide: 'a landslide', medical: 'a medical emergency', missing: 'a missing person', other: 'an emergency' };
   const reply = 'This sounds like ' + (LABEL[rule.incident_type] || 'an emergency') +
     (rule.flags.length ? ' with ' + rule.flags.join(', ') : '') + '. Call Rescue 1122 now and stay on this channel — the AI helper is offline right now, so these are keyword-based answers.';
-  ok(res, { engine: 'rules', engineLabel: 'Offline helper', intent: rule, triage: tri, guidance: GUIDANCE[rule.incident_type] || GUIDANCE.other, question: nextQuestion(rule), reply, draft: { incident_type: rule.incident_type, needs: rule.needs, people_count: rule.people_count, urgency: rule.urgency, description: message } }, 'Copilot reply');
+  ok(res, { engine: 'rules', engineLabel: 'Offline helper', aiDebug: errs, intent: rule, triage: tri, guidance: GUIDANCE[rule.incident_type] || GUIDANCE.other, question: nextQuestion(rule), reply, draft: { incident_type: rule.incident_type, needs: rule.needs, people_count: rule.people_count, urgency: rule.urgency, description: message } }, 'Copilot reply');
 }
 
 /* ── Mesh Network (real-time zone relay) ─────────────────
