@@ -561,14 +561,23 @@
 
   <!-- NEARBY HELP -->
   <div id="page-nearby" class="hide">
+    <div class="card fade-up" style="margin-bottom:16px">
+      <div class="card-header"><h3><i data-i="pin"></i> Where are you?</h3><span class="badge-sm">Live</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input id="nearLoc" class="field-input" placeholder="Area, city or address in Pakistan…" style="flex:1;min-width:180px" autocomplete="off">
+        <button type="button" class="lp-btn" style="flex:none" onclick="nearFind()"><i data-i="search"></i> Find</button>
+        <button type="button" class="lp-btn" id="nearGpsBtn" style="flex:none" onclick="nearGps()"><i data-i="pin"></i> Use GPS</button>
+      </div>
+      <div id="nearNote" style="font-size:12px;opacity:.72;margin-top:8px"></div>
+    </div>
     <div class="grid-2">
       <div>
-        <div class="card fade-up" style="margin-bottom:16px"><div class="card-header"><h3>Nearby Shelters</h3><span class="badge-sm">Real distance</span></div><div id="nearbyShelters"></div></div>
-        <div class="card fade-up"><div class="card-header"><h3>Nearby Hospitals</h3><span class="badge-sm">Real distance</span></div><div id="nearbyHosp"></div></div>
+        <div class="card fade-up" style="margin-bottom:16px"><div class="card-header"><h3>Nearby Shelters, Centres &amp; NGOs</h3><span class="badge-sm">Nearest first</span></div><div id="nearbyShelters"></div></div>
+        <div class="card fade-up"><div class="card-header"><h3>Nearby Hospitals</h3><span class="badge-sm">Nearest first</span></div><div id="nearbyHosp"></div></div>
       </div>
       <div class="map-box fade-up" style="height:360px;position:relative;overflow:hidden">
         <div id="helpMap" style="position:absolute;inset:0"></div>
-        <div style="position:absolute;top:10px;left:12px;z-index:600;background:rgba(20,40,25,.78);color:#F5EEDB;padding:5px 11px;border-radius:10px;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.25)">Nearby in Pakistan</div>
+        <div id="nearMapTag" style="position:absolute;top:10px;left:12px;z-index:600;background:rgba(20,40,25,.78);color:#F5EEDB;padding:5px 11px;border-radius:10px;font-size:12px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.25)">Set your location to see what is nearby</div>
       </div>
     </div>
   </div>
@@ -1241,12 +1250,105 @@ function citizenSignin(){
   });
 }
 
-function renderNearby() {
+/* ── NEARBY (live): the closest hospitals + shelters/centres/NGOs to the citizen's real
+   position, pulled from OpenStreetMap and sorted by true distance. Nothing is shown for a
+   guessed location — the citizen must give GPS or search an area first, so the map never
+   "moves on its own" to a fake spot. ── */
+var NEAR = { pt:null, gps:false, hospitals:[], shelters:[] }, NEAR_MK = [];
+function nearFmt(km){ return km<1 ? Math.round(km*1000)+' m' : (km<10 ? km.toFixed(1) : Math.round(km))+' km'; }
+function hasRealPoint(){
+  if (RT_START) return true;
+  if (LP && LP.getCur && LP.getCur()) return true;
+  if (GCO) return true;
+  var uu = RL_GetUser() || {};
+  return !!(window.RL_LIVE && RL_LIVE.geo(uu.area || uu.city || ''));
+}
+function nearCard(x, kind){
+  var col = kind==='hospital' ? '#4C8DF6' : '#7C6CF0';
+  var bg  = kind==='hospital' ? '#4C8DF622' : '#7C6CF022';
+  var tag = x.rank ? '<span class="badge-sm" style="background:#F5B83D22;color:#B8860B;margin-left:6px">Nearest</span>' : '';
+  return '<div class="nearby-card"><div class="item-icon" style="background:'+bg+';color:'+col+'"><i data-i="'+(kind==='hospital'?'hosp':'home')+'"></i></div>'
+    +'<div style="flex:1;min-width:0"><h5>'+esc(x.name)+tag+'</h5><p>'+esc(x.addr || x.source || 'OpenStreetMap')+'</p></div>'
+    +'<div class="dist" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span>'+nearFmt(x.km)+'</span>'
+    +'<button type="button" class="lp-btn" style="padding:5px 9px;font-size:11.5px" onclick="nearGo('+x.lat+','+x.lng+')"><i data-i="pin"></i> Route</button></div></div>';
+}
+function renderNearby(){
   var s = RL_$('nearbyShelters'), h = RL_$('nearbyHosp');
-  var EMPTY_S = '<p class="mute" style="font-size:13px;padding:12px 4px">No shelter locations published yet — they appear here as soon as they are registered.</p>';
-  var EMPTY_H = '<p class="mute" style="font-size:13px;padding:12px 4px">No hospital locations published yet — they appear here as soon as they are registered.</p>';
-  if (s) s.innerHTML = SHELTERS.length ? SHELTERS.map(function(x){ return '<div class="nearby-card"><div class="item-icon" style="background:#7C6CF022;color:var(--p)"></div><div style="flex:1"><h5>'+esc(x[0])+'</h5><p>'+esc(x[1])+' · '+esc(x[2])+'</p></div><div class="dist">'+esc(x[3])+'</div></div>'; }).join('') : EMPTY_S;
-  if (h) h.innerHTML = HOSPS.length ? HOSPS.map(function(x){ return '<div class="nearby-card"><div class="item-icon" style="background:#3CC08E22;color:var(--gr)"></div><div style="flex:1"><h5>'+esc(x[0])+'</h5><p>'+esc(x[1])+' · '+esc(x[2])+'</p></div><div class="dist">'+esc(x[3])+'</div></div>'; }).join('') : EMPTY_H;
+  var ask = '<p class="mute" style="font-size:13px;padding:12px 4px">Tap <b>Use GPS</b> or type your area above — the closest places appear here with real distances.</p>';
+  var noneS = NEAR.pt ? '<p class="mute" style="font-size:13px;padding:12px 4px">No shelter, centre or NGO found near this spot in OpenStreetMap. Try a nearby city or widen your search.</p>' : ask;
+  var noneH = NEAR.pt ? '<p class="mute" style="font-size:13px;padding:12px 4px">No hospital found near this spot. Try the Request → Nearby Hospital flow, or search a bigger area.</p>' : ask;
+  if (s) s.innerHTML = NEAR.shelters.length ? NEAR.shelters.map(function(x){ return nearCard(x,'shelter'); }).join('') : noneS;
+  if (h) h.innerHTML = NEAR.hospitals.length ? NEAR.hospitals.map(function(x){ return nearCard(x,'hospital'); }).join('') : noneH;
+  if (window.RL_Icons) RL_Icons();
+}
+function nearGo(lat,lng){
+  var from = NEAR.pt || userPoint();
+  if (!from){ RL_Toast('Set your location first'); return; }
+  if (HELP_MAP){ try{ HELP_MAP.setView([lat,lng],14); }catch(e){} }
+  window.open('https://www.google.com/maps/dir/?api=1&origin='+from.lat+','+from.lng+'&destination='+lat+','+lng+'&travelmode=driving','_blank','noopener');
+}
+function paintNearMap(){
+  if (!window.L || !HELP_MAP || !NEAR.pt) return;
+  NEAR_MK.forEach(function(m){ try{ HELP_MAP.removeLayer(m); }catch(e){} }); NEAR_MK = [];
+  var me = window.L.circleMarker([NEAR.pt.lat,NEAR.pt.lng],{radius:9,color:'#B91C1C',weight:2,fillColor:'#B91C1C',fillOpacity:.95}).addTo(HELP_MAP).bindPopup('<b>You are here</b>'+(NEAR.gps?'':'<br>(searched spot)')); NEAR_MK.push(me);
+  var pts = [[NEAR.pt.lat,NEAR.pt.lng]];
+  NEAR.hospitals.concat(NEAR.shelters).forEach(function(f){
+    var c = f.kind==='hospital' ? '#4C8DF6' : '#2E7D32';
+    var mk = window.L.circleMarker([f.lat,f.lng],{radius:7,color:c,weight:2,fillColor:c,fillOpacity:.8}).addTo(HELP_MAP).bindPopup('<b>'+esc(f.name)+'</b><br>'+nearFmt(f.km)+' · '+esc(f.addr||f.source||'')); NEAR_MK.push(mk); pts.push([f.lat,f.lng]);
+  });
+  var tag = RL_$('nearMapTag'); if (tag) tag.textContent = 'Near '+(NEAR.gps?'your GPS position':(NEAR.pt.name||'your area'));
+  if (NEAR.hospitals.length || NEAR.shelters.length){ try{ HELP_MAP.fitBounds(window.L.latLngBounds(pts).pad(0.3)); }catch(e){} }
+}
+function nearbyRefresh(pt, isGps){
+  if (!window.RL_LIVE){ RL_Toast('Location service unavailable'); return; }
+  NEAR.pt = { lat:+pt.lat, lng:+pt.lng, name:pt.name||'' }; NEAR.gps = !!isGps;
+  var note = RL_$('nearNote'); if (note) note.textContent = 'Finding the nearest help around '+(isGps?'your GPS position':(pt.name||'that area'))+'…';
+  /* the ReliefLink registry (DB rows) is merged with live OpenStreetMap so verified centres always show */
+  var registry = SHELTERS.map(function(x){ return { name:x[0], kind:'Shelter', lat:x[4], lng:x[5], addr:x[1], source:'ReliefLink' }; })
+    .concat(HOSPS.map(function(x){ return { name:x[0], kind:'Hospital', lat:x[4], lng:x[5], addr:x[1], source:'ReliefLink' }; }));
+  RL_LIVE.nearestFacilities(pt.lat, pt.lng, { radiusKm:30, limit:10, registry:registry }).then(function(list){
+    list = (list||[]).filter(function(f){ return f.lat!=null && f.lng!=null; });
+    list.forEach(function(f){ f.kind = String(f.kind||'').toLowerCase().indexOf('hosp')>-1 ? 'hospital' : 'shelter'; });
+    NEAR.hospitals = list.filter(function(f){ return f.kind==='hospital'; }).slice(0,10);
+    NEAR.shelters  = list.filter(function(f){ return f.kind!=='hospital'; }).slice(0,10);
+    if (NEAR.hospitals[0]) NEAR.hospitals[0].rank = 1;
+    if (NEAR.shelters[0]) NEAR.shelters[0].rank = 1;
+    renderNearby(); paintNearMap();
+    /* the citizen asked: whenever GPS is given, point the map at the nearest hospital */
+    if (isGps && NEAR.hospitals.length){
+      var n = NEAR.hospitals[0];
+      if (HELP_MAP){ try{ HELP_MAP.setView([n.lat,n.lng],14); }catch(e){} }
+      if (note) note.textContent = 'Nearest hospital: '+n.name+' — '+nearFmt(n.km)+' away.';
+    } else if (note){
+      note.textContent = 'Nearest help around '+(isGps?'your GPS position':(pt.name||'that area'))+' — '+NEAR.hospitals.length+' hospital(s), '+NEAR.shelters.length+' shelter/centre(s).';
+    }
+  }).catch(function(){
+    if (note) note.textContent = 'Could not reach the live map service — check your connection and try again.';
+  });
+}
+function nearSet(pt, isGps){
+  initHelpMap();
+  if (HELP_MAP){ try{ HELP_MAP.setView([pt.lat,pt.lng], isGps?15:12); }catch(e){} }
+  nearbyRefresh(pt, isGps);
+}
+function nearGps(){
+  if (!window.RL_LIVE){ RL_Toast('Location service unavailable'); return; }
+  var b = RL_$('nearGpsBtn'); if (b) b.disabled = true;
+  RL_LIVE.locate(function(pos){
+    if (b) b.disabled = false;
+    if (!pos || !RL_LIVE.inPK(pos.lat,pos.lng)){ RL_Toast('GPS unavailable or outside Pakistan — type your area instead'); return; }
+    nearSet({ lat:pos.lat, lng:pos.lng }, true);
+  });
+}
+function nearFind(){
+  var q = ((RL_$('nearLoc')||{}).value||'').trim();
+  if (!q){ RL_Toast('Type an area, city or address'); return; }
+  if (!window.RL_LIVE){ RL_Toast('Location service unavailable'); return; }
+  var note = RL_$('nearNote'); if (note) note.textContent = 'Finding "'+q+'"…';
+  RL_LIVE.place(q).then(function(r){
+    if (!r || r.lat==null){ if (note) note.textContent = 'Could not find "'+q+'" — try a bigger area or city.'; return; }
+    nearSet({ lat:+r.lat, lng:+r.lng, name:r.name||q }, false);
+  }).catch(function(){ if (note) note.textContent = 'Search failed — try a city name.'; });
 }
 
 /* ── LIVE: real requests + nearby resources WITH coordinates + true distances ── */
@@ -1293,14 +1395,22 @@ function loadMyReqs() {
 }
 function loadNearbyLive() {
   var me = userPoint();
+  var pending = 2;
+  function after(){
+    if (--pending > 0) return;
+    destList(true);
+    /* only compute "nearby" from a real location — never from a guessed default */
+    if (hasRealPoint()) { nearbyRefresh(me, !!(LP && LP.getCur && LP.getCur())); }
+    else { renderNearby(); }
+  }
   RL_Get('/shelters').then(function(a){
     if (Array.isArray(a) && a.length) {
       SHELTERS = a.filter(function(x){ return x.latitude != null; }).map(function(x){
         var p = { lat: +x.latitude, lng: +x.longitude };
         return [x.name, x.address || '', ((x.current_occupancy||0) + '/' + (x.capacity||0) + ' people'), distLabel(me, p), p.lat, p.lng];
       });
-      renderNearby(); destList(true);
     }
+    after();
   });
   RL_Get('/hospitals').then(function(a){
     if (Array.isArray(a) && a.length) {
@@ -1308,8 +1418,8 @@ function loadNearbyLive() {
         var p = { lat: +x.latitude, lng: +x.longitude };
         return [x.name, x.address || '', ((x.beds_available||0) + ' beds free'), distLabel(me, p), p.lat, p.lng];
       });
-      renderNearby();
     }
+    after();
   });
 }
 
@@ -2254,18 +2364,18 @@ function loadHeroLive(){
 }
 var HELP_MAP=null;
 function initHelpMap(){
-  if(!window.L || HELP_MAP) return; var g=liveArea();
-  HELP_MAP = RL_LIVE.map('helpMap', g.lat, g.lng, 10); if(!HELP_MAP) return;
-  RL_LIVE.marker(HELP_MAP, g.lat, g.lng, '<b>'+g.name+'</b> — your area', '#B91C1C');
-  var placed={s:0,h:0};
-  RL_Get('/shelters').then(function(a){
-    if(Array.isArray(a)) a.forEach(function(x){ if(x.latitude!=null&&x.longitude!=null){ RL_LIVE.marker(HELP_MAP,+x.latitude,+x.longitude,''+(x.name||'Shelter'),'#2E7D32'); placed.s++; } });
-    if(!placed.s) SHELTERS.forEach(function(x){ if(x[4]!=null) RL_LIVE.marker(HELP_MAP,x[4],x[5],''+x[0]+' — '+x[1],'#2E7D32'); });
-  });
-  RL_Get('/hospitals').then(function(a){
-    if(Array.isArray(a)) a.forEach(function(x){ if(x.latitude!=null&&x.longitude!=null){ RL_LIVE.marker(HELP_MAP,+x.latitude,+x.longitude,''+(x.name||'Hospital'),'#4C8DF6'); placed.h++; } });
-    if(!placed.h) HOSPS.forEach(function(x){ if(x[4]!=null) RL_LIVE.marker(HELP_MAP,x[4],x[5],''+x[0]+' — '+x[1],'#4C8DF6'); });
-  });
+  if(!window.L || !window.RL_LIVE) return;
+  /* already built: just refocus/paint on the citizen's real location */
+  if(HELP_MAP){
+    if(NEAR.pt){ try{ HELP_MAP.setView([NEAR.pt.lat,NEAR.pt.lng], NEAR.gps?14:11); }catch(e){} paintNearMap(); }
+    setTimeout(function(){try{HELP_MAP.invalidateSize();}catch(e){}},150);
+    return;
+  }
+  /* never claim a guessed "your area" — until a real location, show the whole of Pakistan */
+  var c = NEAR.pt ? [NEAR.pt.lat,NEAR.pt.lng] : [30.3753,69.3451];
+  HELP_MAP = RL_LIVE.map('helpMap', c[0], c[1], NEAR.pt ? (NEAR.gps?14:11) : 5);
+  if(!HELP_MAP) return;
+  if(NEAR.pt) paintNearMap();
   setTimeout(function(){try{HELP_MAP.invalidateSize();}catch(e){}},250);
 }
 var FLOOD_MAP=null;
@@ -2368,7 +2478,10 @@ var LP=(function(){
     if(!window.L||!window.RL_LIVE) return;
     var el=document.getElementById('locPick'); if(!el) return;
     if(map){ setTimeout(inval,150); if(cur) setPos(cur.lat,cur.lng,false); return; }
-    var g=liveArea(); map=RL_LIVE.map('locPick',g.lat,g.lng,12); if(!map) return;
+    /* open on the saved area if there is one, otherwise a neutral Pakistan view (zoom 5) —
+       never a single fake address the citizen did not choose */
+    var real = hasRealPoint(); var g = real ? liveArea() : { lat:30.3753, lng:69.3451 };
+    map=RL_LIVE.map('locPick',g.lat,g.lng, real?12:5); if(!map) return;
     map.on('click',function(e){ setPos(e.latlng.lat,e.latlng.lng); });
     if(cur) setPos(cur.lat,cur.lng,false);
     setTimeout(inval,250);
@@ -2422,7 +2535,7 @@ var LP=(function(){
       }, function(){ RL_Toast('Live GPS band (permission)'); if(liveOn) toggleLive(); }, {enableHighAccuracy:true,timeout:12000,maximumAge:2000});
     } else { if(watchId!=null&&navigator.geolocation){ navigator.geolocation.clearWatch(watchId); watchId=null; } RL_Toast('Live GPS OFF'); }
   }
-  function recenter(){ init(); if(map&&cur) map.setView([cur.lat,cur.lng],16); else if(map){ var g=liveArea(); map.setView([g.lat,g.lng],12); } }
+  function recenter(){ init(); if(map&&cur) map.setView([cur.lat,cur.lng],16); else if(map){ var real=hasRealPoint(); var g=real?liveArea():{lat:30.3753,lng:69.3451}; map.setView([g.lat,g.lng], real?12:5); } }
   function reset(){ cur=null; GCO=null; if(marker&&map){ map.removeLayer(marker); marker=null; } var a=RL_$("lpAddr"); if(a){ a.textContent='No exact location yet — tap the map.'; a.classList.add('empty'); } var sb=RL_$("safePoint"); if(sb) sb.style.display='none'; }
   return { init:init, locateOnce:locateOnce, find:find, toggleLive:toggleLive, recenter:recenter, getCur:function(){return cur;}, reset:reset, setPos:setPos };
 })();
