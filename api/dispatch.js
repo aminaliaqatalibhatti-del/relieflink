@@ -484,9 +484,9 @@ const K = {
   water:     /paani|pani|water|flood|sel\b|siyabi|bah[ao]|doob|subk|dub|پانی|سیلاب|ڈوب/i,
   injured:   /zakhmi|injur|blood|bleed|chot|khoon|wound|زخمی|چوٹ|خون/i,
   trapped:   /phans|trapped|stuck|chat\b|chatt|roof|tarap|پھنس/i,
-  medical:   /medical|ambulance|doctor|dard|tabiyat|bhari|sick|patient|pregnan|operation|oxygen|heart|طبی|اسبیتال|دل|آکسیجن/i,
+  medical:   /medical|ambulance|doctor|dard|tabiyat|bhari|sick|patient|pregnan|operation|oxygen|heart|fever|bukhaar|bukhar|behoosh|طبی|اسبیتال|دل|آکسیجن/i,
   fire:      /\baag\b|fire|burn|lash\b|smoke|dhuain|flame|آگ|جل/i,
-  storm:     /toofan|storm|cyclone|tez hawa|aandhi|heavy rain|tez barish|baarish|طوفان|بارش/i,
+  storm:     /toofan|storm|cyclone|tez hawa|aandhi|heavy rain|barish|baarish|barsaat|\brain\b|طوفان|بارش/i,
   quake:     /zalzala|earthquake|kamp|tremor|shaking|زلزلہ/i,
   landslide: /landslide|pahaad|pahad|rockfall|mountain.*slide/i,
   missing:   /missing|gum|kho gaya|kho gayi|nazar nahi|la pata|lost child|لاپتا|گم/i,
@@ -644,8 +644,9 @@ async function copilot(res, b) {
     const t2 = triageScore(i2.urgency, i2.people_count, i2.flags);
     return ok(res, { engine: 'gemini', model: g._model, intent: i2, triage: t2, guidance: GUIDANCE[i2.incident_type] || GUIDANCE.other, question: nextQuestion(i2), reply: String(g.reply).slice(0, 300), draft: { incident_type: i2.incident_type, needs: i2.needs, people_count: i2.people_count, urgency: i2.urgency, description: message } }, 'Copilot reply');
   }
-  const reply = 'I understood your situation: ' + rule.incident_type.toUpperCase() +
-    (rule.flags.length ? ' (' + rule.flags.join(', ') + ')' : '') + '. Don\'t wait for emergency services — call Rescue 1122.';
+  const LABEL = { flood: 'flooding', earthquake: 'an earthquake', fire: 'a fire', storm: 'a storm or heavy rain', landslide: 'a landslide', medical: 'a medical emergency', missing: 'a missing person', other: 'an emergency' };
+  const reply = 'This sounds like ' + (LABEL[rule.incident_type] || 'an emergency') +
+    (rule.flags.length ? ' with ' + rule.flags.join(', ') : '') + '. Call Rescue 1122 now and stay on this channel — the AI helper is offline right now, so these are keyword-based answers.';
   ok(res, { engine: 'rules', intent: rule, triage: tri, guidance: GUIDANCE[rule.incident_type] || GUIDANCE.other, question: nextQuestion(rule), reply, draft: { incident_type: rule.incident_type, needs: rule.needs, people_count: rule.people_count, urgency: rule.urgency, description: message } }, 'Copilot reply');
 }
 
